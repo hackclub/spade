@@ -18,6 +18,8 @@
 #else
 
   #if 0
+    #define FUCKED_COORDINATE_SYSTEM
+
     static uint16_t color16(uint8_t r, uint8_t b, uint8_t g) {
       r = (uint8_t)((float)((float)r / 255.0f) * 31.0f);
       g = (uint8_t)((float)((float)g / 255.0f) * 31.0f);
@@ -52,7 +54,7 @@ static float signf(float f) {
 
 #define SPRITE_SIZE (16)
 typedef struct {
-  uint16_t pixels[SPRITE_SIZE][SPRITE_SIZE];
+  Color       pixels[SPRITE_SIZE][SPRITE_SIZE];
   uint8_t     lit[SPRITE_SIZE*SPRITE_SIZE / 8];
 } Doodle;
 
@@ -228,10 +230,10 @@ WASM_EXPORT char *temp_str_mem(void) {
 }
 
 static int render_xy_to_idx(int x, int y) {
-#ifdef EMBEDDED
+#ifdef FUCKED_COORDINATE_SYSTEM
   return (SCREEN_SIZE_X - x - 1)*SCREEN_SIZE_Y + y;
 #else
-  return SCREEN_SIZE_X*y + x;
+  return SCREEN_SIZE_X*y + (SCREEN_SIZE_X - x - 1);
 #endif
 }
 
@@ -281,7 +283,7 @@ static void render_blit_sprite(Color *screen, int sx, int sy, char kind) {
 
           render_lit_write(px, py);
 
-#if EMBEDDED
+#if FUCKED_COORDINATE_SYSTEM
           int i = (ox + sx + scale*(state->tile_size - 1 - x)) * SCREEN_SIZE_Y + py;
 #else
           int i = SCREEN_SIZE_X*py + px;
@@ -338,7 +340,11 @@ WASM_EXPORT void render(Color *screen) {
   MapIter m = {0};
   while (map_get_grid(&m))
     render_blit_sprite(screen,
+#ifdef FUCKED_COORDINATE_SYSTEM
                        ox + size*(state->width - 1 - m.sprite->x),
+#else
+                       ox + size*m.sprite->x,
+#endif
                        oy + size*m.sprite->y,
                        m.sprite->kind);
 
