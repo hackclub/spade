@@ -4,6 +4,14 @@
 #include <stdlib.h>
 #include <stdint.h>
 
+#if 1
+#define dbg(...) ;
+#else
+#define dbg puts
+#endif
+
+#define yell puts
+
 #include "jerryscript.h"
 static struct {
   jerry_value_t press_cb;

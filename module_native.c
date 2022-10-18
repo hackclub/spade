@@ -34,7 +34,7 @@ static char jerry_value_to_char(jerry_value_t val) {
   jerry_size_t nbytes = jerry_string_to_char_buffer(val, tmp, 1);
   if (nbytes == 0) {
 
-    puts("uh non-char given as char input!");
+    yell("uh non-char given as char input!");
     // jerryxx_print_value(val);
     return '.';
   }
@@ -43,7 +43,7 @@ static char jerry_value_to_char(jerry_value_t val) {
 
 JERRYXX_FUN(setMap) {
   
-  puts("module_native::setMap");
+  dbg("module_native::setMap");
   JERRYXX_CHECK_ARG(0, "str");
 
   char *tmp = temp_str_mem();
@@ -61,14 +61,14 @@ JERRYXX_FUN(setMap) {
 
 JERRYXX_FUN(setBackground) {
   
-  puts("module_native::setBackground");
+  dbg("module_native::setBackground");
   render_set_background(jerry_value_to_char(JERRYXX_GET_ARG(0)));
   return jerry_create_undefined();
 }
 
 JERRYXX_FUN(native_legend_doodle_set_fn) {
   
-  puts("module_native::native_legend_doodle_set_fn");
+  dbg("module_native::native_legend_doodle_set_fn");
   JERRYXX_CHECK_ARG(0, "char");
   JERRYXX_CHECK_ARG(1, "str");
 
@@ -93,42 +93,42 @@ JERRYXX_FUN(native_press_cb_fn) {
 }
 
 JERRYXX_FUN(native_legend_clear_fn) { 
-  puts("module_native::native_legend_clear_fn");
+  dbg("module_native::native_legend_clear_fn");
   legend_clear(); return jerry_create_undefined(); }
 JERRYXX_FUN(native_legend_prepare_fn) { 
-  puts("module_native::native_legend_prepare_fn");
+  dbg("module_native::native_legend_prepare_fn");
   legend_prepare(); return jerry_create_undefined(); }
 
 JERRYXX_FUN(native_solids_push_fn) {
   
-  puts("module_native::native_solids_push_fn");
+  dbg("module_native::native_solids_push_fn");
   char c = jerry_value_to_char(JERRYXX_GET_ARG(0));
   solids_push(c);
   return jerry_create_undefined();
 }
 JERRYXX_FUN(native_solids_clear_fn) { 
-  puts("module_native::native_solids_clear_fn");
+  dbg("module_native::native_solids_clear_fn");
   solids_clear(); return jerry_create_undefined(); }
 
 JERRYXX_FUN(native_push_table_set_fn) {
   
-  puts("module_native::native_push_table_set_fn");
+  dbg("module_native::native_push_table_set_fn");
   push_table_set(jerry_value_to_char(JERRYXX_GET_ARG(0)),
                  jerry_value_to_char(JERRYXX_GET_ARG(1)));
   return jerry_create_undefined();
 }
 JERRYXX_FUN(native_push_table_clear_fn) { 
-  puts("module_native::native_push_table_clear_fn");
+  dbg("module_native::native_push_table_clear_fn");
   push_table_clear(); return jerry_create_undefined(); }
 
 JERRYXX_FUN(native_map_clear_deltas_fn) { 
-  puts("module_native::native_map_clear_deltas_fn");
+  dbg("module_native::native_map_clear_deltas_fn");
   map_clear_deltas(); return jerry_create_undefined(); }
 
 /* I may be recreating kaluma's MAGIC_STRINGs thing here,
    I'd have to look more into how it works */
 static struct {
-  jerry_value_t x, y, dx, dy, addr, type, push, remove, generation;
+  jerry_value_t x, y, dx, dy, addr, type, _x, _y, _type, push, remove, generation;
   jerry_property_descriptor_t  x_prop_desc,  y_prop_desc, type_prop_desc,
                               dx_prop_desc, dy_prop_desc;
   jerry_value_t sprite_remove;
@@ -289,6 +289,13 @@ static void props_init(void) {
   props.    remove = jerry_create_string((const jerry_char_t *)     "remove");
   props.generation = jerry_create_string((const jerry_char_t *) "generation");
 
+  /* this is why we can't fucking have nice things */
+  props.        _x = jerry_create_string((const jerry_char_t *)         "_x");
+  props.        _y = jerry_create_string((const jerry_char_t *)         "_y");
+  props.     _type = jerry_create_string((const jerry_char_t *)      "_type");
+  /* GAHHHHHHHHH just kill me now */
+  /* i shouldn't let this bother me so much ... */
+
   props.sprite_remove = jerry_create_external_function(sprite_remove);
 
   jerry_init_property_descriptor_fields(&props.x_prop_desc);
@@ -343,12 +350,16 @@ static jerry_value_t sprite_to_jerry_object(Sprite *s) {
   jerry_release_value(jerry_define_own_property(ret, props.dy, &props.dy_prop_desc));
   jerry_release_value(jerry_define_own_property(ret, props.type, &props.type_prop_desc));
 
+  jerry_release_value(jerry_define_own_property(ret, props._x, &props.x_prop_desc));
+  jerry_release_value(jerry_define_own_property(ret, props._y, &props.y_prop_desc));
+  jerry_release_value(jerry_define_own_property(ret, props._type, &props.type_prop_desc));
+
   return ret;
 }
 
 JERRYXX_FUN(getFirst) {
   
-  puts("module_native::getFirst");
+  dbg("module_native::getFirst");
   JERRYXX_CHECK_ARG(0, "char");
   char kind = jerry_value_to_char(JERRYXX_GET_ARG(0));
   return sprite_to_jerry_object(map_get_first(kind));
@@ -356,7 +367,7 @@ JERRYXX_FUN(getFirst) {
 
 JERRYXX_FUN(clearTile) {
   
-  puts("module_native::clearTile");
+  dbg("module_native::clearTile");
   JERRYXX_CHECK_ARG_NUMBER(0, "x");
   JERRYXX_CHECK_ARG_NUMBER(1, "y");
   map_drill(
@@ -368,7 +379,7 @@ JERRYXX_FUN(clearTile) {
 
 JERRYXX_FUN(addSprite) {
   
-  puts("module_native::addSprite");
+  dbg("module_native::addSprite");
   JERRYXX_CHECK_ARG_NUMBER(0, "x");
   JERRYXX_CHECK_ARG_NUMBER(1, "y");
   JERRYXX_CHECK_ARG(2, "type");
@@ -396,7 +407,7 @@ JERRYXX_FUN(addSprite) {
 */
 JERRYXX_FUN(getTile) {
   
-  puts("module_native::getTile");
+  dbg("module_native::getTile");
   JERRYXX_CHECK_ARG_NUMBER(0, "x");
   JERRYXX_CHECK_ARG_NUMBER(1, "y");
   int x = JERRYXX_GET_ARG_NUMBER(0);
@@ -423,14 +434,14 @@ JERRYXX_FUN(getTile) {
 
 
 JERRYXX_FUN(width) { 
-  puts("module_native::width");
+  dbg("module_native::width");
   return jerry_create_number(state->width); }
 JERRYXX_FUN(height) { 
-  puts("module_native::height");
+  dbg("module_native::height");
   return jerry_create_number(state->height); }
 JERRYXX_FUN(getAll) {
   
-  puts("module_native::getAll");
+  dbg("module_native::getAll");
   uint8_t no_arg = JERRYXX_GET_ARG_COUNT == 0;
   char kind = no_arg ? 0 : jerry_value_to_char(JERRYXX_GET_ARG(0));
   int i = 0;
@@ -458,7 +469,7 @@ JERRYXX_FUN(getAll) {
 
 JERRYXX_FUN(getGrid) {
   
-  puts("module_native::getGrid");
+  dbg("module_native::getGrid");
   int len = map_width() * map_height();
   jerry_value_t ret = jerry_create_array(len);
   for (int i = 0; i < len; i++)
@@ -483,7 +494,7 @@ JERRYXX_FUN(getGrid) {
 
 JERRYXX_FUN(tilesWith) {
   
-  puts("module_native::tilesWith");
+  dbg("module_native::tilesWith");
   char *kinds = temp_str_mem();
 
   for (int i = 0; i < args_cnt; i++)
@@ -517,7 +528,7 @@ JERRYXX_FUN(tilesWith) {
 
 JERRYXX_FUN(native_text_add_fn) {
   
-  puts("module_native::native_text_add_fn");
+  dbg("module_native::native_text_add_fn");
   char *tmp = temp_str_mem();
   jerry_size_t nbytes = jerry_string_to_char_buffer(
     JERRYXX_GET_ARG(0),
@@ -546,7 +557,7 @@ JERRYXX_FUN(native_text_add_fn) {
 }
 
 JERRYXX_FUN(native_text_clear_fn) { 
-  puts("module_native::native_text_clear_fn");
+  dbg("module_native::native_text_clear_fn");
   text_clear(); return jerry_create_undefined(); }
 
 
