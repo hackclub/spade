@@ -92,6 +92,13 @@ JERRYXX_FUN(native_press_cb_fn) {
   return jerry_create_undefined(); 
 }
 
+JERRYXX_FUN(native_frame_cb_fn) {
+  if (spade_state.frame_cb) jerry_release_value(spade_state.frame_cb);
+
+  spade_state.frame_cb = jerry_acquire_value(JERRYXX_GET_ARG(0));
+  return jerry_create_undefined(); 
+}
+
 JERRYXX_FUN(native_legend_clear_fn) { 
   dbg("module_native::native_legend_clear_fn");
   legend_clear(); return jerry_create_undefined(); }
@@ -597,6 +604,7 @@ jerry_value_t module_native_init(jerry_value_t exports) {
   jerryxx_set_property_function(exports, MSTR_NATIVE_legend_prepare, native_legend_prepare_fn);
 
   jerryxx_set_property_function(exports, MSTR_NATIVE_press_cb, native_press_cb_fn);
+  jerryxx_set_property_function(exports, MSTR_NATIVE_frame_cb, native_frame_cb_fn);
 
   return jerry_create_undefined();
 }

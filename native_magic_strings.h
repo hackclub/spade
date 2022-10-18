@@ -52,5 +52,6 @@
 #define MSTR_NATIVE_legend_prepare "legend_prepare"
 
 #define MSTR_NATIVE_press_cb "press_cb"
+#define MSTR_NATIVE_frame_cb "frame_cb"
 
 #endif /* __NATIVE_MAGIC_STRINGS_H */

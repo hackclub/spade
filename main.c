@@ -14,7 +14,7 @@
 
 #include "jerryscript.h"
 static struct {
-  jerry_value_t press_cb;
+  jerry_value_t press_cb, frame_cb;
 } spade_state = {0};
 
 static void oom() { puts("oom!"); abort(); }
@@ -122,6 +122,24 @@ static void spade_call_press(int pin) {
   jerry_release_value(this_value);
 }
 
+static void spade_call_frame(double dt) {
+  if (!spade_state.press_cb) return;
+
+  jerry_value_t this_value = jerry_create_undefined();
+  jerry_value_t args[] = { jerry_create_number(dt) };
+
+  jerry_value_t res = jerry_call_function(
+    spade_state.frame_cb,
+    jerry_create_undefined(),
+    args,
+    1
+  );
+  jerry_release_value(res);
+
+  jerry_release_value(args[0]);
+  jerry_release_value(this_value);
+}
+
 static void keyboard(struct mfb_window *window, mfb_key key, mfb_key_mod mod, bool isPressed) {
   (void) window;
   if (!isPressed) return;
@@ -152,9 +170,13 @@ int main() {
   js_init();
   Color screen[SCREEN_SIZE_Y * SCREEN_SIZE_X] = {0};
 
+  struct mfb_timer *lastframe = mfb_timer_create();
+  mfb_timer_now(lastframe);
   do {
     memset(screen, 0, sizeof(screen));
     render((Color *) screen);
+    spade_call_frame(mfb_timer_delta(lastframe));
+    mfb_timer_now(lastframe);
 
     uint8_t ok = STATE_OK == mfb_update_ex(window, screen, SCREEN_SIZE_X, SCREEN_SIZE_Y);
     if (!ok) {
