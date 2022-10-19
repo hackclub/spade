@@ -134,6 +134,9 @@ JERRYXX_FUN(native_map_clear_deltas_fn) {
 
 /* I may be recreating kaluma's MAGIC_STRINGs thing here,
    I'd have to look more into how it works */
+/* edit: kaluma's MAGIC_STRING thing is for snapshots,
+ * which are, yeah, kind of the most extreme version of this.
+ * this is still useful though */
 static struct {
   jerry_value_t x, y, dx, dy, addr, type, _x, _y, _type, push, remove, generation;
   jerry_property_descriptor_t  x_prop_desc,  y_prop_desc, type_prop_desc,
@@ -151,7 +154,8 @@ static Sprite *sprite_from_jerry_addr(jerry_value_t v) {
 
 
 #define jerry_create_error_sprite_freed() \
-  jerry_create_error(JERRY_ERROR_COMMON, (jerry_char_t *)"sprite no longer on map")
+  jerry_create_error(JERRY_ERROR_COMMON, \
+     (jerry_char_t *)"sprite no longer on map - shouldn't see this")
 
 static Sprite *sprite_from_jerry_object(jerry_value_t this_val) {
   jerry_value_t       addr_prop = jerry_get_property(this_val, props.      addr);
@@ -306,33 +310,43 @@ static void props_init(void) {
   props.sprite_remove = jerry_create_external_function(sprite_remove);
 
   jerry_init_property_descriptor_fields(&props.x_prop_desc);
+  props.x_prop_desc.is_configurable_defined = 1;
+  props.x_prop_desc.is_configurable = 1;
   props.x_prop_desc.is_get_defined = 1;
   props.x_prop_desc.getter = jerry_create_external_function(sprite_x_getter);
   props.x_prop_desc.is_set_defined = 1;
   props.x_prop_desc.setter = jerry_create_external_function(sprite_x_setter);
 
   jerry_init_property_descriptor_fields(&props.y_prop_desc);
+  props.y_prop_desc.is_configurable_defined = 1;
+  props.y_prop_desc.is_configurable = 1;
   props.y_prop_desc.is_get_defined = 1;
   props.y_prop_desc.getter = jerry_create_external_function(sprite_y_getter);
   props.y_prop_desc.is_set_defined = 1;
   props.y_prop_desc.setter = jerry_create_external_function(sprite_y_setter);
 
   jerry_init_property_descriptor_fields(&props.type_prop_desc);
+  props.type_prop_desc.is_configurable_defined = 1;
+  props.type_prop_desc.is_configurable = 1;
   props.type_prop_desc.is_get_defined = 1;
   props.type_prop_desc.getter = jerry_create_external_function(sprite_type_getter);
   props.type_prop_desc.is_set_defined = 1;
   props.type_prop_desc.setter = jerry_create_external_function(sprite_type_setter);
 
   jerry_init_property_descriptor_fields(&props.dx_prop_desc);
+  props.dx_prop_desc.is_configurable_defined = 1;
+  props.dx_prop_desc.is_configurable = 1;
   props.dx_prop_desc.is_get_defined = 1;
   props.dx_prop_desc.getter = jerry_create_external_function(sprite_dx_getter);
 
   jerry_init_property_descriptor_fields(&props.dy_prop_desc);
+  props.dy_prop_desc.is_configurable_defined = 1;
+  props.dy_prop_desc.is_configurable = 1;
   props.dy_prop_desc.is_get_defined = 1;
   props.dy_prop_desc.getter = jerry_create_external_function(sprite_dy_getter);
 }
 
-static jerry_value_t sprite_to_jerry_object(Sprite *s) {
+static jerry_value_t sprite_alloc_jerry_object(Sprite *s) {
   if (s == 0) return jerry_create_undefined();
 
   jerry_value_t ret = jerry_create_object();
@@ -362,6 +376,63 @@ static jerry_value_t sprite_to_jerry_object(Sprite *s) {
   jerry_release_value(jerry_define_own_property(ret, props._type, &props.type_prop_desc));
 
   return ret;
+}
+
+jerry_value_t sprite_object_pool[SPRITE_COUNT] = {0};
+static jerry_value_t sprite_to_jerry_object(Sprite *s) {
+  int i = s - state->sprite_pool;
+
+  if (!sprite_object_pool[i])
+    sprite_object_pool[i] = sprite_alloc_jerry_object(s);
+
+  return jerry_acquire_value(sprite_object_pool[i]);
+}
+
+static void sprite_free_jerry_object(Sprite *s) {
+  int i = s - state->sprite_pool;
+
+  if (sprite_object_pool[i]) {
+    jerry_value_t so = sprite_object_pool[i];
+
+    jerry_value_t x     = jerry_get_property(so, props.x    );
+    jerry_value_t y     = jerry_get_property(so, props.y    );
+    jerry_value_t dx    = jerry_get_property(so, props.dx   );
+    jerry_value_t dy    = jerry_get_property(so, props.dy   );
+    jerry_value_t type  = jerry_get_property(so, props.type );
+    jerry_value_t _x    = jerry_get_property(so, props._x   );
+    jerry_value_t _y    = jerry_get_property(so, props._y   );
+    jerry_value_t _type = jerry_get_property(so, props._type);
+
+    jerry_delete_property(so, props.x    );
+    jerry_delete_property(so, props.y    );
+    jerry_delete_property(so, props.dx   );
+    jerry_delete_property(so, props.dy   );
+    jerry_delete_property(so, props.type );
+    jerry_delete_property(so, props._x   );
+    jerry_delete_property(so, props._y   );
+    jerry_delete_property(so, props._type);
+
+    jerry_release_value(jerry_set_property(so, props.x    , x    ));
+    jerry_release_value(jerry_set_property(so, props.y    , y    ));
+    jerry_release_value(jerry_set_property(so, props.dx   , dx   ));
+    jerry_release_value(jerry_set_property(so, props.dy   , dy   ));
+    jerry_release_value(jerry_set_property(so, props.type , type ));
+    jerry_release_value(jerry_set_property(so, props._x   , _x   ));
+    jerry_release_value(jerry_set_property(so, props._y   , _y   ));
+    jerry_release_value(jerry_set_property(so, props._type, _type));
+
+    jerry_release_value(x    );
+    jerry_release_value(y    );
+    jerry_release_value(dx   );
+    jerry_release_value(dy   );
+    jerry_release_value(type );
+    jerry_release_value(_x   );
+    jerry_release_value(_y   );
+    jerry_release_value(_type);
+
+    jerry_release_value(so);
+    sprite_object_pool[i] = 0;
+  }
 }
 
 JERRYXX_FUN(getFirst) {

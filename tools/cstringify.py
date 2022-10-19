@@ -5,4 +5,4 @@ fp = sys.argv[1]
 
 with open(fp) as f:
   for line in f:
-    print('"' + line.strip('\n').replace('"', '\\"') + '\\n"');
+    print('"' + line.strip('\n').replace('\\', '\\\\').replace('"', '\\"') + '\\n"');

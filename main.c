@@ -17,7 +17,7 @@ static struct {
   jerry_value_t press_cb, frame_cb;
 } spade_state = {0};
 
-static void oom() { puts("oom!"); abort(); }
+static void oom() { yell("oom!"); abort(); }
 #include "base_engine.c"
 
 #include "module_native.c"
@@ -35,7 +35,7 @@ static void js_init(void) {
   const jerry_length_t script_size = sizeof (script) - 1;
 
   /* Initialize engine */
-  jerry_init (JERRY_INIT_EMPTY);
+  jerry_init (JERRY_INIT_MEM_STATS);
 
   /* add shit to global scpoe */
   {
@@ -80,7 +80,7 @@ static void js_init(void) {
   );
 
   if (jerry_value_is_error (parsed_code)) {
-    puts("couldn't parse :(");
+    yell("couldn't parse :(");
     jerryxx_print_error(parsed_code, 1);
     abort();
   }
@@ -89,7 +89,7 @@ static void js_init(void) {
   jerry_value_t ret_value = jerry_run (parsed_code);
 
   if (jerry_value_is_error (ret_value)) {
-    puts("couldn't run :(");
+    yell("couldn't run :(");
     jerryxx_print_error(ret_value, 1);
     abort();
   }
@@ -116,14 +116,20 @@ static void spade_call_press(int pin) {
     args,
     1
   );
+
+  if (jerry_value_is_error (res)) {
+    yell("couldn't call press_cb :(");
+    jerryxx_print_error(res, 1);
+    abort();
+  }
+
   jerry_release_value(res);
 
   jerry_release_value(args[0]);
   jerry_release_value(this_value);
 }
-
 static void spade_call_frame(double dt) {
-  if (!spade_state.press_cb) return;
+  if (!spade_state.frame_cb) return;
 
   jerry_value_t this_value = jerry_create_undefined();
   jerry_value_t args[] = { jerry_create_number(dt) };
@@ -134,6 +140,11 @@ static void spade_call_frame(double dt) {
     args,
     1
   );
+  if (jerry_value_is_error (res)) {
+    yell("couldn't call frame_cb :(");
+    jerryxx_print_error(res, 1);
+    abort();
+  }
   jerry_release_value(res);
 
   jerry_release_value(args[0]);
@@ -166,7 +177,7 @@ int main() {
   if (!window) return 0;
   mfb_set_keyboard_callback(window, keyboard);
 
-  init(); /* god i REALLY need to namespace baseengine */
+  init(sprite_free_jerry_object); /* god i REALLY need to namespace baseengine */
   js_init();
   Color screen[SCREEN_SIZE_Y * SCREEN_SIZE_X] = {0};
 

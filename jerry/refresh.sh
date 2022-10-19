@@ -7,6 +7,7 @@ python3 jerryscript/tools/build.py \
   --debug \
   --clean \
   --error-messages=ON \
+  --mem-stats=ON \
   --line-info=ON \
   --jerry-cmdline=OFF
 make -C $(pwd)/example_build install\

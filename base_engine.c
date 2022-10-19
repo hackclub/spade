@@ -95,6 +95,8 @@ typedef struct {
 typedef struct {
   int width, height;
 
+  void (*map_free_cb)(Sprite *);
+
   char  text_char [TEXT_CHARS_MAX_Y][TEXT_CHARS_MAX_X];
   Color text_color[TEXT_CHARS_MAX_Y][TEXT_CHARS_MAX_X];
 
@@ -175,7 +177,7 @@ WASM_EXPORT void text_clear(void) {
   __builtin_memset(state->text_color, 0, sizeof(state->text_color));
 }
 
-WASM_EXPORT void init(void) {
+WASM_EXPORT void init(void (*map_free_cb)(Sprite *)) {
 #ifdef __wasm__
   int mem_needed = sizeof(State)/PAGE_SIZE;
 
@@ -192,6 +194,8 @@ WASM_EXPORT void init(void) {
   static State_Render _state_render = {0};
   state->render = &_state_render;
 #endif
+
+  state->map_free_cb = map_free_cb;
 
   /* -- error handling for when state is dynamically allocated -- */ 
   // if (state->render == 0) {
@@ -380,6 +384,8 @@ static Sprite *map_alloc(void) {
   return 0;
 }
 static void map_free(Sprite *s) {
+  if (state->map_free_cb) state->map_free_cb(s);
+
   memset(s, 0, sizeof(Sprite));
   size_t i = s - state->sprite_pool;
   state->sprite_slot_active    [i] = 0;
