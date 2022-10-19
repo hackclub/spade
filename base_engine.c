@@ -451,6 +451,9 @@ static void map_plop(Sprite *sprite) {
 
 
 WASM_EXPORT Sprite *map_add(int x, int y, char kind) {
+  if (x < 0 || x >= state->width ) return 0;
+  if (y < 0 || y >= state->height) return 0;
+
   Sprite *s = map_alloc();
   *s = (Sprite) { .x = x, .y = y, .kind = kind };
   // dbg("assigned to that mf");

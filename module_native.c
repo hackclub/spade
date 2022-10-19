@@ -461,11 +461,19 @@ JERRYXX_FUN(addSprite) {
   JERRYXX_CHECK_ARG_NUMBER(0, "x");
   JERRYXX_CHECK_ARG_NUMBER(1, "y");
   JERRYXX_CHECK_ARG(2, "type");
-  return sprite_to_jerry_object(map_add(
+  Sprite *s = map_add(
     JERRYXX_GET_ARG_NUMBER(0),
     JERRYXX_GET_ARG_NUMBER(1),
     jerry_value_to_char(JERRYXX_GET_ARG(2))
-  ));
+  );
+
+  if (s == 0)
+    return jerry_create_error(
+      JERRY_ERROR_COMMON,
+      (jerry_char_t *)"can't add sprite to location outside of map"
+    );
+  else
+    return sprite_to_jerry_object(s);
 }
 
 /*
