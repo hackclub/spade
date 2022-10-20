@@ -7,14 +7,14 @@ python3 jerryscript/tools/build.py \
   --debug \
   --clean \
   --error-messages=ON \
+  --profile=es.next \
   --mem-stats=ON \
   --line-info=ON \
+  --promise-callback=ON \
   --jerry-cmdline=OFF
 make -C $(pwd)/example_build install\
 
 cd ~/spade/jerry
-cp ~/jerryscript_build/example_build/lib/* lib/
-cp ~/jerryscript_build/example_install/include
+cp ~/jerryscript_build/example_install/lib/* lib/
 rm -rf include
-cp ~/jerryscript_build/example_install/include ./
 cp -r ~/jerryscript_build/example_install/include ./

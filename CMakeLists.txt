@@ -11,6 +11,7 @@ target_link_libraries(spade
   "${CMAKE_CURRENT_SOURCE_DIR}/jerry/lib/libjerry-core.a"
   "${CMAKE_CURRENT_SOURCE_DIR}/jerry/lib/libjerry-ext.a"
   "${CMAKE_CURRENT_SOURCE_DIR}/jerry/lib/libjerry-port-default.a"
+  "${CMAKE_CURRENT_SOURCE_DIR}/jerry/lib/libjerry-port.a"
 )
 include_directories(jerry/include)
 

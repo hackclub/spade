@@ -24,7 +24,7 @@ static void oom() { yell("oom!"); abort(); }
 
 JERRYXX_FUN(console_log) {
   jerryxx_print_value(JERRYXX_GET_ARG(0));
-  return jerry_create_undefined();
+  return jerry_undefined();
 }
 
 static void js_init(void) {
@@ -39,45 +39,44 @@ static void js_init(void) {
 
   /* add shit to global scpoe */
   {
-    jerry_value_t global_object = jerry_get_global_object ();
+    jerry_value_t global_object = jerry_current_realm ();
 
     /* add the "console" module to the JavaScript global object */
     {
-      jerry_value_t console_obj = jerry_create_object ();
+      jerry_value_t console_obj = jerry_object ();
 
-      jerryxx_set_property_function(console_obj, "log", console_log);
+      jerry_object_set(console_obj, jerry_string_sz("log"), jerry_function_external(console_log));
 
-      jerry_value_t prop_console = jerry_create_string ((const jerry_char_t *) "console");
-      jerry_release_value(jerry_set_property(global_object, prop_console, console_obj));
-      jerry_release_value (prop_console);
+      jerry_value_t prop_console = jerry_string_sz ("console");
+      jerry_value_free(jerry_object_set(global_object, prop_console, console_obj));
+      jerry_value_free (prop_console);
 
       /* Release all jerry_value_t-s */
-      jerry_release_value (console_obj);
+      jerry_value_free (console_obj);
     }
 
     /* add the "native" module to the JavaScript global object */
     {
-      jerry_value_t native_obj = jerry_create_object ();
+      jerry_value_t native_obj = jerry_object ();
 
       module_native_init(native_obj);
 
-      jerry_value_t prop_native = jerry_create_string ((const jerry_char_t *) "native");
-      jerry_release_value(jerry_set_property(global_object, prop_native, native_obj));
-      jerry_release_value (prop_native);
+      jerry_value_t prop_native = jerry_string_sz("native");
+      jerry_value_free(jerry_object_set(global_object, prop_native, native_obj));
+      jerry_value_free (prop_native);
 
       /* Release all jerry_value_t-s */
-      jerry_release_value (native_obj);
+      jerry_value_free (native_obj);
     }
 
-    jerry_release_value(global_object);
+    jerry_value_free(global_object);
   }
 
   /* Setup Global scope code */
-  jerry_value_t parsed_code = jerry_parse (
-    (jerry_char_t *)"src", sizeof("src")-1,
-    script, script_size,
-    JERRY_PARSE_STRICT_MODE
-  );
+  jerry_parse_options_t po;
+  po.options = JERRY_PARSE_STRICT_MODE | JERRY_PARSE_HAS_SOURCE_NAME;
+  po.source_name = jerry_string_sz("src");
+  jerry_value_t parsed_code = jerry_parse(script, script_size, &po);
 
   if (jerry_value_is_error (parsed_code)) {
     yell("couldn't parse :(");
@@ -95,24 +94,47 @@ static void js_init(void) {
   }
 
   /* Returned value must be freed */
-  jerry_release_value (ret_value);
+  jerry_value_free (ret_value);
 
   /* Parsed source code must be freed */
-  jerry_release_value (parsed_code);
+  jerry_value_free (parsed_code);
 
   /* Cleanup engine */
   // jerry_cleanup ();
 }
 
+static void js_promises(void) {
+  static int aborted = 0;
+  if (aborted) return;
+
+  jerry_value_t job_value;
+  while (true) {
+    job_value = jerry_run_jobs();
+
+    if (jerry_value_is_error(job_value)) {
+      yell("couldn't run job :(");
+      jerryxx_print_error(job_value, 1);
+
+      if (jerry_value_is_abort(job_value)) {
+        aborted = 1;
+        yell("everyone died, can never run js again");
+        return;
+      }
+    }
+    else
+      break;
+  }
+}
+
 static void spade_call_press(int pin) {
   if (!spade_state.press_cb) return;
 
-  jerry_value_t this_value = jerry_create_undefined();
-  jerry_value_t args[] = { jerry_create_number(pin) };
+  jerry_value_t this_value = jerry_undefined();
+  jerry_value_t args[] = { jerry_number(pin) };
 
-  jerry_value_t res = jerry_call_function(
+  jerry_value_t res = jerry_call(
     spade_state.press_cb,
-    jerry_create_undefined(),
+    jerry_undefined(),
     args,
     1
   );
@@ -123,20 +145,20 @@ static void spade_call_press(int pin) {
     abort();
   }
 
-  jerry_release_value(res);
+  jerry_value_free(res);
 
-  jerry_release_value(args[0]);
-  jerry_release_value(this_value);
+  jerry_value_free(args[0]);
+  jerry_value_free(this_value);
 }
 static void spade_call_frame(double dt) {
   if (!spade_state.frame_cb) return;
 
-  jerry_value_t this_value = jerry_create_undefined();
-  jerry_value_t args[] = { jerry_create_number(dt) };
+  jerry_value_t this_value = jerry_undefined();
+  jerry_value_t args[] = { jerry_number(dt) };
 
-  jerry_value_t res = jerry_call_function(
+  jerry_value_t res = jerry_call(
     spade_state.frame_cb,
-    jerry_create_undefined(),
+    jerry_undefined(),
     args,
     1
   );
@@ -145,10 +167,10 @@ static void spade_call_frame(double dt) {
     jerryxx_print_error(res, 1);
     abort();
   }
-  jerry_release_value(res);
+  jerry_value_free(res);
 
-  jerry_release_value(args[0]);
-  jerry_release_value(this_value);
+  jerry_value_free(args[0]);
+  jerry_value_free(this_value);
 }
 
 static void keyboard(struct mfb_window *window, mfb_key key, mfb_key_mod mod, bool isPressed) {
@@ -184,6 +206,8 @@ int main() {
   struct mfb_timer *lastframe = mfb_timer_create();
   mfb_timer_now(lastframe);
   do {
+    js_promises();
+
     memset(screen, 0, sizeof(screen));
     render((Color *) screen);
     spade_call_frame(mfb_timer_delta(lastframe));
