@@ -471,6 +471,7 @@ WASM_EXPORT void map_set(char *str) {
   int tx = 0, ty = 0;
   do {
     switch (*str) {
+      case  ' ': continue;
       case '\n': ty++, tx = 0; break;
       case  '.': tx++;         break;
       case '\0':               break;
