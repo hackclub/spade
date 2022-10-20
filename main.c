@@ -104,6 +104,29 @@ static void js_init(void) {
   // jerry_cleanup ();
 }
 
+static void js_promises(void) {
+  static int aborted = 0;
+  if (aborted) return;
+
+  jerry_value_t job_value;
+  while (true) {
+    job_value = jerry_run_all_enqueued_jobs();
+
+    if (jerry_value_is_error(job_value)) {
+      yell("couldn't run job :(");
+      jerryxx_print_error(job_value, 1);
+
+      if (jerry_value_is_abort(job_value)) {
+        aborted = 1;
+        yell("everyone died, can never run js again");
+        return;
+      }
+    }
+    else
+      break;
+  }
+}
+
 static void spade_call_press(int pin) {
   if (!spade_state.press_cb) return;
 
@@ -184,6 +207,8 @@ int main() {
   struct mfb_timer *lastframe = mfb_timer_create();
   mfb_timer_now(lastframe);
   do {
+    js_promises();
+
     memset(screen, 0, sizeof(screen));
     render((Color *) screen);
     spade_call_frame(mfb_timer_delta(lastframe));
