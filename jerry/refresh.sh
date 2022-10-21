@@ -1,5 +1,10 @@
-cd ~/jerryscript_build
-rm -rf example-*
+#!/bin/bash
+
+JS_DIR=/home/me/jerryscript-build
+SPADE_DIR=/home/me/clones/hackclub--spade
+
+cd $JS_DIR
+rm -r example-*
 
 python3 jerryscript/tools/build.py \
   --builddir=$(pwd)/example_build \
@@ -10,11 +15,9 @@ python3 jerryscript/tools/build.py \
   --mem-stats=ON \
   --line-info=ON \
   --jerry-cmdline=OFF
-make -C $(pwd)/example_build install\
+make -C $(pwd)/example_build install
 
-cd ~/spade/jerry
-cp ~/jerryscript_build/example_build/lib/* lib/
-cp ~/jerryscript_build/example_install/include
-rm -rf include
-cp ~/jerryscript_build/example_install/include ./
-cp -r ~/jerryscript_build/example_install/include ./
+cd $SPADE_DIR/jerry
+cp $JS_DIR/example_build/lib/* lib/
+rm -r include
+cp -r $JS_DIR/example_install/include ./
