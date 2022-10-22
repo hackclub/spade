@@ -25,8 +25,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "jerryscript.h"
-#include "jerryxx.h"
 #include "native_magic_strings.h"
 
 static char jerry_value_to_char(jerry_value_t val) {
@@ -647,7 +645,7 @@ JERRYXX_FUN(native_text_clear_fn) {
   text_clear(); return jerry_create_undefined(); }
 
 
-jerry_value_t module_native_init(jerry_value_t exports) {
+static void module_native_init(jerry_value_t exports) {
 
   props_init();
 
@@ -684,8 +682,6 @@ jerry_value_t module_native_init(jerry_value_t exports) {
 
   jerryxx_set_property_function(exports, MSTR_NATIVE_press_cb, native_press_cb_fn);
   jerryxx_set_property_function(exports, MSTR_NATIVE_frame_cb, native_frame_cb_fn);
-
-  return jerry_create_undefined();
 }
 
 // moved JS wrapper into engine.js

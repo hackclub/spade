@@ -7,6 +7,7 @@ add_executable(spade main.c)
 add_library(JerryXX jerryxx.c)
 
 target_link_libraries(spade
+ -fno-omit-frame-pointer -fsanitize=undefined
   JerryXX 
   "${CMAKE_CURRENT_SOURCE_DIR}/jerry/lib/libjerry-core.a"
   "${CMAKE_CURRENT_SOURCE_DIR}/jerry/lib/libjerry-ext.a"

@@ -39,7 +39,7 @@ exports.setBackground = native.setBackground;
 
 /* opts: x, y, color (all optional) */
 exports.addText = (str, opts={}) => {
-  console.log("engine.js:addText");
+  // console.log("engine.js:addText");
   const CHARS_MAX_X = 21;
   const padLeft = Math.floor((CHARS_MAX_X - str.length)/2);
 
@@ -55,7 +55,7 @@ exports.clearText = () => native.text_clear();
 
 
 exports.setLegend = (...bitmaps) => {
-  console.log("engine.js:setLegend");
+  // console.log("engine.js:setLegend");
   native.legend_clear();
   for (const [charStr, bitmap] of bitmaps) {
     native.legend_doodle_set(charStr, bitmap.trim());
@@ -64,13 +64,13 @@ exports.setLegend = (...bitmaps) => {
 };
 
 exports.setSolids = solids => {
-  console.log("engine.js:setSolids");
+  // console.log("engine.js:setSolids");
   native.solids_clear();
   solids.forEach(native.solids_push);
 };
 
 exports.setPushables = pushTable => {
-  console.log("engine.js:setPushables");
+  // console.log("engine.js:setPushables");
   native.push_table_clear();
   for (const [pusher, pushesList] of Object.entries(pushTable))
     for (const pushes of pushesList)
@@ -78,7 +78,8 @@ exports.setPushables = pushTable => {
 };
 
 let afterInputs = [];
-exports.afterInput = fn => (console.log('engine.js:afterInputs'), afterInputs.push(fn));
+// exports.afterInput = fn => (console.log('engine.js:afterInputs'), afterInputs.push(fn));
+exports.afterInput = fn => afterInputs.push(fn);
 
 const button = {
   pinToHandlers: {
@@ -119,8 +120,7 @@ native.press_cb(pin => {
   clearTimeout = clearInterval = id => {
     timers = timers.filter(t => t.id != id);
   };
-  native.frame_cb(dt_secs => {
-    const dt = dt_secs * 1000;
+  native.frame_cb(dt => {
     timers = timers.filter(tim => {
       if (tim.ms <= 0) {
         /* trigger their callback */
@@ -143,7 +143,7 @@ native.press_cb(pin => {
 }
 
 exports.onInput = (key, fn) => {
-  console.log("engine.js:onInput");
+  // console.log("engine.js:onInput");
   const pin = button.keyToPin[key];
 
   if (pin === undefined)
@@ -169,377 +169,476 @@ exports.map = _makeTag(text => text);
 return exports;
 })();
 /*
-@title: tetris
-@author: neesh
+@title: Zombie Defense
+@author: Edmund
+
+Controls:
+  W, S - Movement
+  I - Shooting
+  L - Reload
+  J - Restart game
+
+Goal:
+  Get the highest score
 */
 
-const rows = 12;
-const cols = 8;
-const borders = false;
-const emptyColor = "0";
+function range(start, stop, step) {
+    if (typeof stop == 'undefined') {
+        // one param defined
+        stop = start;
+        start = 0;
+    }
 
-const iPiece = [
-      [  true,  true,  true,  true ]
-  ]
-const jPiece = [
-      [  true, false, false ],
-      [  true,  true,  true ]
-]
-const lPiece = [
-    [ false, false,  true ],
-    [  true,  true,  true ]
-]
-const oPiece = [
-    [  true,  true ],
-    [  true,  true ]
-]
-const sPiece = [
-    [ false,  true,  true ],
-    [  true,  true, false ]
-]
-const tPiece = [
-    [ false,  true, false ],
-    [  true,  true,  true ]
-]
-const zPiece = [
-    [  true,  true, false ],
-    [ false,  true,  true ]
-]
-let board = [];
+    if (typeof step == 'undefined') {
+        step = 1;
+    }
+
+    if ((step > 0 && start >= stop) || (step < 0 && start <= stop)) {
+        return [];
+    }
+
+    var result = [];
+    for (var i = start; step > 0 ? i < stop : i > stop; i += step) {
+        result.push(i);
+    }
+
+    return result;
+};
+
+function sleep(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+const player = "p";
+const zombie = "z";
+const barrier = "b";
+const grass = "g";
+const road = "r"
+const background = "x";
+const bullet = "t";
+const textArea = "a";
+const roadStripes = "s";
+
+const shootSFX = tune`
+49.504950495049506: d4/49.504950495049506,
+1534.6534653465346`
+const zombieAttackSFX = tune`
+30: d4/30,
+30: d4/30,
+30: d4/30,
+30: d4/30,
+30: d4/30,
+30: d4/30,
+780`
+const loseTune = tune`
+151.5151515151515: g4/151.5151515151515,
+151.5151515151515: f4/151.5151515151515,
+151.5151515151515: e4/151.5151515151515,
+151.5151515151515: d4/151.5151515151515,
+151.5151515151515: c4/151.5151515151515,
+151.5151515151515: c4/151.5151515151515,
+151.5151515151515: c4/151.5151515151515,
+3787.8787878787875`
+const zombieDieSFX = tune`
+47.24409448818898: b4-47.24409448818898,
+47.24409448818898: b4-47.24409448818898,
+47.24409448818898: b4-47.24409448818898,
+1370.0787401574803`
+const zombieMoveSFX = tune`
+326.0869565217391: c4^326.0869565217391,
+10108.695652173912`
+const outOfBulletSFX = tune `
+59.28853754940712: d5/59.28853754940712,
+59.28853754940712: e5/59.28853754940712,
+59.28853754940712: f5/59.28853754940712,
+1719.3675889328065`
+
+setLegend(
+  [ textArea, bitmap`
+1111111111111111
+1111111111111111
+1111111111111111
+1111111111111111
+1111111111111111
+1111111111111111
+1111111111111111
+1111111111111111
+1111111111111111
+1111111111111111
+1111111111111111
+1111111111111111
+1111111111111111
+1111111111111111
+1111111111111111
+1111111111111111`],
+  [ bullet, bitmap`
+................
+................
+................
+................
+................
+................
+....666666......
+....6666663.....
+....6666663.....
+....666666......
+................
+................
+................
+................
+................
+................`],
+  [ player, bitmap`
+................
+......55........
+.....5555.......
+.....5565.......
+.....2222.......
+.....2020.......
+.....2222.......
+......22.....0..
+.....55555..LLLL
+....55577777L.1.
+...55777555.L1..
+...555557777L...
+...55555555.....
+...55555555.....
+...55555555.....
+....55..55......`],
+  [ zombie, bitmap`
+.......4444.....
+.....4444444....
+....444444444...
+....433443344...
+...44334433444..
+...44444444444..
+5..44444444444..
+55554L2L2L2L44..
+...44L2L2L2L444.
+...44LLLLLLL444.
+...44LL2L2L4455.
+...44442L244554.
+.....44...5554..
+.....44.555444..
+...4444..44444..
+...4444..44444..`],
+  [ barrier, bitmap`
+......LLL.......
+.....11111......
+.....11111......
+......LLL.......
+.....11111......
+.....11111......
+......LLL.......
+.....11111......
+.....11111......
+......LLL.......
+.....11111......
+.....11111......
+......LLL.......
+.....11111......
+.....11111......
+......LLL.......`],
+  [ grass, bitmap`
+4444444444444444
+4440044444444444
+4400004444004444
+4004404440004444
+4444444440400444
+4444444440440444
+4440044444444444
+4400044444444444
+4404004444444444
+4444444444444444
+4444444444400444
+4444004444004044
+4440004440444044
+4440404444444444
+4444444444444444
+4444444444444444`],
+  [ road, bitmap`
+0000000000000000
+0000000000000000
+0000000000000000
+0000000000000000
+0000000000000000
+0000000000000000
+0000000000000000
+0000000000000000
+0000000000000000
+0000000000000000
+0000000000000000
+0000000000000000
+0000000000000000
+0000000000000000
+0000000000000000
+0000000000000000`],
+  [ background, bitmap`
+4444444444444444
+4444444444444444
+4444444444444444
+4444444444444444
+4444444444444444
+4444444444444444
+4444444444444444
+4444444444444444
+4444444444444444
+4444444444444444
+4444444444444444
+4444444444444444
+4444444444444444
+4444444444444444
+4444444444444444
+4444444444444444`],
+  [ roadStripes, bitmap`
+0000000000000000
+0000000000000000
+0000000000000000
+0000000000000000
+0000000000000000
+0000000000000000
+2222222222222222
+2222222222222222
+2222222222222222
+2222222222222222
+0000000000000000
+0000000000000000
+0000000000000000
+0000000000000000
+0000000000000000
+0000000000000000`],
+);
+
+setSolids([player, barrier, textArea]);
+setBackground(background)
+
+let level = 0;
+const levels = [
+  map`
+aaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaa
+.bggggggggggggggg
+.brrrrrrrrrrrrrrr
+.brrrrrrrrrrrrrrr
+.brrrrrrrrrrrrrrr
+pbrssrssrssrssrss
+.brrrrrrrrrrrrrrr
+.brrrrrrrrrrrrrrr
+.brrrrrrrrrrrrrrr
+.bggggggggggggggg
+aaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaa`,
+];
+
+setMap(levels[level]);
+
+// Initialization stuff done
+
+// Changeable Values
+const spawnTilesX = 16
+const spawnTilesY = range(3, 10)
+const initBullets = 5;
+const initHealth = 10;
+const initReloadTimeSeconds = 3;
+const initZombieWalkSpeed = 2000;
+const initZombieSpawnRate = 0.1;
+
+// Internal values
+let bullets = initBullets;
 let score = 0;
-const music = tune`
-297.029702970297: e5-297.029702970297 + c4~297.029702970297,
-297.029702970297: d4~297.029702970297,
-297.029702970297: b4-297.029702970297 + g4~297.029702970297 + c4~297.029702970297,
-297.029702970297: c5-297.029702970297 + a4~297.029702970297 + d4~297.029702970297,
-297.029702970297: d5-297.029702970297 + b4~297.029702970297 + c4~297.029702970297,
-297.029702970297: d4~297.029702970297,
-297.029702970297: c5-297.029702970297 + c4~297.029702970297,
-297.029702970297: b4-297.029702970297 + d4~297.029702970297,
-297.029702970297: a4-297.029702970297 + c4~297.029702970297,
-297.029702970297: d4~297.029702970297,
-297.029702970297: a4-297.029702970297 + f4~297.029702970297 + c4~297.029702970297,
-297.029702970297: c5-297.029702970297 + a4~297.029702970297 + d4~297.029702970297,
-297.029702970297: e5-297.029702970297 + c5~297.029702970297 + c4~297.029702970297,
-297.029702970297: d4~297.029702970297,
-297.029702970297: d5-297.029702970297 + c4~297.029702970297,
-297.029702970297: c5-297.029702970297 + d4~297.029702970297,
-297.029702970297: b4-297.029702970297 + g4~297.029702970297 + c4~297.029702970297,
-297.029702970297: d4~297.029702970297,
-297.029702970297: c5-297.029702970297 + c4~297.029702970297 + a4~297.029702970297,
-297.029702970297: d5-297.029702970297 + d4~297.029702970297 + b4~297.029702970297,
-297.029702970297: c4~297.029702970297 + c5~297.029702970297 + e5-297.029702970297,
-297.029702970297: d4~297.029702970297,
-297.029702970297: d5-297.029702970297 + c4~297.029702970297,
-297.029702970297: d4~297.029702970297,
-297.029702970297: a4-297.029702970297 + f4~297.029702970297 + c4~297.029702970297,
-297.029702970297: d4~297.029702970297,
-297.029702970297: a4-297.029702970297 + f4~297.029702970297 + c4~297.029702970297,
-297.029702970297: d4~297.029702970297,
-297.029702970297: c4~297.029702970297,
-297.029702970297: d4~297.029702970297,
-297.029702970297: c4~297.029702970297,
-297.029702970297: d4~297.029702970297`
-let playback = playTune(music, Infinity)
-for (let i = 0; i < rows; i ++){
-  const row = [];
-  for (let j = 0; j < cols; j ++){ row.push(emptyColor); }
-  board.push(row);
-}
+let health = initHealth;
+let gameOver = false;
+let reloadTimeSeconds = initReloadTimeSeconds;
+let isReloading = false;
+let reloadRemainTime = 0;
+let zombieWalkSpeed = initZombieWalkSpeed;
+let zombieSpawnRate = initZombieSpawnRate;
 
-const pieces = [ iPiece, jPiece, lPiece, oPiece,
-                        sPiece, tPiece, zPiece ]
-const colors = [ "3", "6", "8",
-                             "1", "7", "4", "5" ]
+onInput("w", () => {
+  if (gameOver) return;
+  getFirst(player).y -= 1;
+});
 
-let fallingPiece;
-let fallingPieceColor;
-let numFallingPieceRows, numFallingPieceCols;
-let fallingPieceRow, fallingPieceCol;
+onInput("s", () => {
+  if (gameOver) return;
+  getFirst(player).y += 1;
+});
 
-function newFallingPiece() {
-  let randomIndex = Math.floor(Math.random() * pieces.length);
-  fallingPiece = pieces[randomIndex]
-  fallingPieceColor = colors[randomIndex]
-
-  numFallingPieceRows = fallingPiece.length;
-  numFallingPieceCols = fallingPiece[0].length;
-  fallingPieceRow = 0;
-  fallingPieceCol = Math.floor(cols / 2) - Math.floor(numFallingPieceCols / 2)
-}
-
-function placeFallingPiece() {
-  let fp = fallingPiece;
-  for (let r = 0; r < fp.length; r ++) {
-    const row = fp[r]
-    for (let c = 0; c < fp[r].length; c++) {
-      const col = fp[r][c];
-      if (col) {
-        let boardRow = fallingPieceRow + r;
-        let boardCol = fallingPieceCol + c;
-        board[boardRow][boardCol] = fallingPieceColor
-      }
-    }
+onInput("i", () => {
+  if (gameOver) return;
+  if (bullets <= 0) {
+    playTune(outOfBulletSFX);
+    return;
   }
-  removeFullRows()
-}
-
-function generateEmpty2DList(rows, cols, fill) {
-  const grid = [];
-  for (let i = 0; i < rows; i ++) {
-    const row = [];
-    for (let j = 0; j < cols; j ++) {
-      row.push(fill ? fill : "");
-    }
-    grid.push(row);
+  playTune(shootSFX);
+  const playerObj = getFirst(player);
+  bullets--
+  addSprite(playerObj.x + 1, playerObj.y, bullet);
+  if (bullets <= 0) {
+    playTune(outOfBulletSFX);
   }
-  return grid
-}
+});
 
-function rotateFallingPiece() {
-  const oldRows = numFallingPieceRows;
-  const oldCols = numFallingPieceCols;
-  const oldPiece = fallingPiece;
-  const oldRow = fallingPieceRow;
-  const oldCol = fallingPieceCol;
-  let rotated = generateEmpty2DList(oldCols, oldRows)
+onInput("j", () => {
+  restartGame();
+});
 
-  let newRows = oldCols
-  let newCols = oldRows
-
-  for (let c = 0; c < oldCols; c ++) {
-    for (let r = 0; r < oldRows; r ++) {
-      rotated[c][r] = oldPiece[r][c];
-    }
+onInput("l", () => {
+  // Checking for bullet state
+  if (bullets != 5) {
+    reload()
   }
+});
 
-  for (let r = 0; r < newRows; r ++) {
-    rotated[r].reverse()
-  }
-
-  numFallingPieceRows = newRows;
-  numFallingPieceCols = newCols;
-  fallingPiece = rotated;
-
-  let newRow = oldRow + Math.floor(oldRows / 2) - Math.floor(newRows / 2)
-  let newCol = oldCol + Math.floor(oldCols / 2) - Math.floor(newCols / 2)
-
-  fallingPieceRow = newRow
-  fallingPieceCol = newCol;
-
-  if(!fallingPieceIsLegal()) {
-    fallingPiece = oldPiece;
-    numFallingPieceRows = oldRows;
-    numFallingPieceCols = oldCols;
-    fallingPieceRow = oldRow;
-    fallingPieceCol = oldCol;
-  }
-  
-}
-
-function fallingPieceIsLegal() {
-  for (let r = 0; r < fallingPiece.length; r ++) {
-    const row = fallingPiece[r]
-    for (let c = 0; c < row.length; c ++) {
-      const col = fallingPiece[r][c];
-      if (!col) continue;
-      const x = r + fallingPieceRow;
-      const y = c + fallingPieceCol;
-      const withinBoundsX = x >= 0 && x < rows;
-      const withinBoundsY = y >= 0 && y < cols;
-      if (!withinBoundsX || !withinBoundsY) {
-        return false;
-      }
-      if (board[x][y] != emptyColor) {
-        return false
-      }
-    }
-  }
-  return true;
-}
-
-function moveFallingPiece(drow, dcol) {
-  fallingPieceRow += drow;
-  fallingPieceCol += dcol;
-  if (!fallingPieceIsLegal()) {
-    fallingPieceRow -= drow;
-    fallingPieceCol -= dcol;
-    return false;
-  }
-  return true;
-}
-
-function removeFullRows(app) {
-  let fullRows = 0;
-  const newBoard = [];
-  board.forEach(row => {
-    let isFull = true;
-    row.forEach(col => {
-      if (col == emptyColor) {
-        isFull = false;
-      }
-    })
-    if (isFull) {
-      fullRows += 1;
-    }
-    else {
-      newBoard.push(row)
-    }
+const reload = async () => {
+  if (isReloading) return;
+  addText(`Reloading...`, {
+    x: 1, 
+    y: 14, 
+    color: [ 0, 200, 200 ]
   })
-  for (let r = 0; r < fullRows; r ++) {
-    newBoard.splice(0, 0, Array.from(emptyColor.repeat(cols)))
-  }
-  board = newBoard
-  score += fullRows;
-}
-
-// each "sprite" contains 16 actual cells, x, y are the top left coords
-function genPiece(xCoord, yCoord) {
-  let sprite = []; // 4x4 of 4x4s
-  for (let i = 0; i < 4; i ++) {
-    let rows = []; // 4 4x4s
-    for (let j = 0; j < 4; j ++){
-      const x = i + xCoord;
-      const y = j + yCoord;
-      let cell = board[x][y];
-      const withinFallingPieceX = fallingPieceRow <= x && x < fallingPieceRow + numFallingPieceRows
-      const withinFallingPieceY = fallingPieceCol <= y && y < fallingPieceCol + numFallingPieceCols
-      if (withinFallingPieceX && withinFallingPieceY) {
-        if (fallingPiece[x - fallingPieceRow][y - fallingPieceCol]) {
-          cell = fallingPieceColor;
-        }
-      }
-      let row = []; // 4x4
-      for (let r = 0; r < 4; r ++) {
-        let miniRow = []; // 1x4
-        for (let c = 0; c < 4; c ++) {
-          if ((r == 0 || c == 0 || r == 3 || c == 3) && borders) { // make borders black
-            miniRow.push(emptyColor);
-          }
-          else {
-            miniRow.push(cell);
-          }
-        }
-        row.push(miniRow);
-      }
-      rows.push(row)
+  isReloading = true
+  for (let i = reloadTimeSeconds; i > 0; i--) {
+        reloadRemainTime = i
+        await sleep(1000);
     }
-    sprite.push(rows);
-  }
-  return boardToString(sprite);
+  bullets = 5
+  isReloading = false
+  await sleep(3000);
 }
 
-function boardToString(board) {
-  // board is a 4x4 of 4x4s
-  let string = "";
-  for (const bigRow of board) {
-    let bigRowString = "\n\n\n";
-    for (const cell of bigRow) {
-      // 4x4
-      let row = "";
-      for (let c = 0; c < 4; c ++) {
-        for (let r = 0; r < 4; r ++) {
-          row += (cell[r][c]);
-        }
-        row += "\n"
-      }
-
-      let rows = bigRowString.split("\n")
-      let newRows = row.trim().split("\n")
-      bigRowString = rows.map((r, i) => r + newRows[i]).join("\n")
-    }
-    string += bigRowString
-    string += "\n"
-  }
-  return string;
-}
-
-
-function loadPieces() {
-  const legend = [];
-  let i = 0;
-  for (let r = 0; r < rows; r += 4){
-    for (let c = 0; c < cols; c += 4) {
-      legend.push([`${i}`, genPiece(r, c)])
-      i += 1;
-    }
-  }
-  setLegend(...legend)
-}
-
-function start() {
-  fallingPiece = undefined;
-  fallingPieceRow = undefined;
-  fallingPieceCol = undefined;
-  fallingPieceColor = undefined;
-  numFallingPieceRows = undefined;
-  numFallingPieceCols = undefined;
-
-  board = generateEmpty2DList(rows, cols, emptyColor)
-  newFallingPiece();
-  loadPieces();
+const restartGame = async () => {
+  // Reinit game internal values
+  bullets = initBullets;
   score = 0;
+  health = initHealth;
+  gameOver = false;
+  reloadTimeSeconds = initReloadTimeSeconds;
+  isReloading = false;
+  reloadRemainTime = 0;
+  zombieWalkSpeed = initZombieWalkSpeed;
+  zombieSpawnRate = initZombieSpawnRate;
+
+  // Remove all zombies
+  getAll(zombie).forEach((zombie) => {
+    zombie.remove();
+  });
 }
-
-
-start();
-setBackground(bitmap`
-0000000000000000
-0000000000000000
-0000000000000000
-0000000000000000
-0000000000000000
-0000000000000000
-0000000000000000
-0000000000000000
-0000000000000000
-0000000000000000
-0000000000000000
-0000000000000000
-0000000000000000
-0000000000000000
-0000000000000000
-0000000000000000`);
-
-setMap(`
-01
-23
-45
-`)
-
-setSolids([]);
 
 setInterval(() => {
-  getAll().forEach((sprite) => {
-    sprite.remove();
+  if (gameOver) return;
+  clearText()
+  if (!isReloading) {
+    if (bullets > 0) {
+      addText(`Bullets:${bullets}`, {
+        x: 1, 
+        y: 14, 
+        color: [ 0, 200, 150 ]
+      })
+    } else {
+      addText(`Reload!`, {
+        x: 1, 
+        y: 14, 
+        color: [ 200, 0, 0 ]
+      })
+    }
+  } else {
+    addText(`Reloading...${reloadRemainTime}`, {
+      x: 1, 
+      y: 14, 
+      color: [ 0, 200, 200 ]
+    })
+  }
+  addText(`Score:${score}`, {
+    x: 1, 
+    y: 1, 
+    color: [ 0, 0, 200 ]
   })
-  loadPieces();
-  setMap(`
-  01
-  23
-  45
-  `)
-
-  clearText();
-  addText(`${score}`, { x: 14, y: 1, color: [255, 255, 255] })
+  addText(`Health:${health}`, {
+    x: 10, 
+    y: 1, 
+    color: [ 200, 0, 0 ]
+  })
+}, 10)
+ 
+setInterval(() => {
+  getAll(bullet).forEach((bulletObj) => {
+    getTile(bulletObj.x + 1, bulletObj.y).forEach((sprite) => {
+      if (sprite.type === zombie) {
+        // Zombie detected
+        playTune(zombieDieSFX);
+        sprite.remove()
+        bulletObj.remove()
+        score += 1
+        return;
+      }
+    })
+    if (bulletObj.x === 16) {
+      bulletObj.remove();
+    }
+    bulletObj.x += 1
+  }) 
 }, 30)
 
 setInterval(() => {
-  if (!moveFallingPiece(1, 0)) {
-    placeFallingPiece();
-    newFallingPiece();
-  }
+  if (health > 0) return;
+  if (gameOver) return;
+  gameOver = true;
+  clearText()
+  addText(`Game over`, {
+    x: 6, 
+    y: 6, 
+    color: [ 200, 0, 0 ]
+  })
+  addText(`Score:${score}`, {
+    x: 7, 
+    y: 7, 
+    color: [ 200, 0, 0 ]
+  })
+  addText(`Press j to retry`, {
+    x: 3, 
+    y: 8, 
+    color: [ 200, 0, 0 ]
+  })
+  // Remove all zombies
+  getAll(zombie).forEach((zombie) => {
+    zombie.remove();
+  });
+  playTune(loseTune);
+}, 30)
 
-  for (let c = 0; c < cols; c ++) {
-    if (board[0][c] != emptyColor) {
-      start();
+setInterval(() => {
+  if (gameOver) return;
+  for (let y = spawnTilesY[0]; y < spawnTilesY.slice(-1)[0]; y++) {
+    if (Math.random() < zombieSpawnRate) {
+      addSprite(spawnTilesX, y, zombie);
     }
   }
-}, 700)
+}, zombieWalkSpeed)
 
-onInput("d", () => { moveFallingPiece(0, 1) })
-onInput("a", () => { moveFallingPiece(0, -1) })
-onInput("s", () => { moveFallingPiece(1, 0) })
-onInput("w", () => { rotateFallingPiece() })
-onInput("k", () => { start() })
+setInterval(() => {
+  if (gameOver) return;
+  if (getFirst(zombie)) {
+    playTune(zombieMoveSFX);
+  };
+  getAll(zombie).forEach((zombieObj) => {
+    if (zombieObj.x === 2) {
+      // Touched gate
+      playTune(zombieAttackSFX);
+      health--
+      zombieObj.remove();
+    }
+    zombieObj.x -= 1
+  }) 
+}, zombieWalkSpeed)
 
+// Game gets harder every 5 seconds
+setInterval(() => {
+  if (zombieWalkSpeed > 1000) {
+    
+  }
+  zombieWalkSpeed -= 250
+  if (zombieSpawnRate < 0.4) {
+    zombieSpawnRate += 0.05
+  }
+}, 5 * 1000)

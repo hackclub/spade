@@ -72,7 +72,7 @@ typedef struct { Sprite *sprite; int x, y; uint8_t dirty; } MapIter;
 
 #define PER_CHAR (255)
 #define PER_DOODLE (40)
-#define SPRITE_COUNT (1 << 8)
+#define SPRITE_COUNT (1 << 9)
 
 #define MAP_SIZE_X (20)
 #define MAP_SIZE_Y (20)

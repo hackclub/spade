@@ -106,8 +106,7 @@
 #endif /* !defined (JERRY_BUILTIN_PROXY) */
 
 #ifndef JERRY_BUILTIN_REALMS
-/* Disable this feature due to the lockup issue */
-# define JERRY_BUILTIN_REALMS 0 // JERRY_ESNEXT
+# define JERRY_BUILTIN_REALMS JERRY_ESNEXT
 #endif /* !defined (JERRY_BUILTIN_REALMS) */
 
 #ifndef JERRY_BUILTIN_REFLECT
