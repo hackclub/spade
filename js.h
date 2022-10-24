@@ -60,7 +60,7 @@ static void js_init(void) {
   if (jerry_value_is_error (parsed_code)) {
     yell("couldn't parse :(");
     jerryxx_print_error(parsed_code, 1);
-    abort();
+    // abort();
   }
 
   /* Execute the parsed source code in the Global scope */
@@ -69,7 +69,7 @@ static void js_init(void) {
   if (jerry_value_is_error (ret_value)) {
     yell("couldn't run :(");
     jerryxx_print_error(ret_value, 1);
-    abort();
+    // abort();
   }
 
   /* Returned value must be freed */
@@ -121,7 +121,7 @@ static void spade_call_press(int pin) {
   if (jerry_value_is_error (res)) {
     yell("couldn't call press_cb :(");
     jerryxx_print_error(res, 1);
-    abort();
+    // abort();
   }
 
   jerry_release_value(res);
@@ -144,7 +144,7 @@ static void spade_call_frame(double dt) {
   if (jerry_value_is_error (res)) {
     yell("couldn't call frame_cb :(");
     jerryxx_print_error(res, 1);
-    abort();
+    // abort();
   }
   jerry_release_value(res);
 

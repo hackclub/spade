@@ -17,7 +17,7 @@
 
 #else
 
-  #if 0
+  #if SPADE_EMBEDDED
     #define FUCKED_COORDINATE_SYSTEM
 
     static uint16_t color16(uint8_t r, uint8_t b, uint8_t g) {
@@ -72,7 +72,7 @@ typedef struct { Sprite *sprite; int x, y; uint8_t dirty; } MapIter;
 
 #define PER_CHAR (255)
 #define PER_DOODLE (40)
-#define SPRITE_COUNT (1 << 9)
+#define SPRITE_COUNT (256)
 
 #define MAP_SIZE_X (20)
 #define MAP_SIZE_Y (20)
@@ -285,7 +285,7 @@ static void render_blit_sprite(Color *screen, int sx, int sy, char kind) {
 
           render_lit_write(px, py);
 
-#if FUCKED_COORDINATE_SYSTEM
+#ifdef FUCKED_COORDINATE_SYSTEM
           int i = (ox + sx + scale*(state->tile_size - 1 - x)) * SCREEN_SIZE_Y + py;
 #else
           int i = SCREEN_SIZE_X*py + px;
