@@ -378,6 +378,8 @@ static jerry_value_t sprite_alloc_jerry_object(Sprite *s) {
 
 jerry_value_t sprite_object_pool[SPRITE_COUNT] = {0};
 static jerry_value_t sprite_to_jerry_object(Sprite *s) {
+  if (s == 0) return jerry_create_undefined();
+
   int i = s - state->sprite_pool;
 
   if (!sprite_object_pool[i])

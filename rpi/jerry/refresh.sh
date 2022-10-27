@@ -21,7 +21,7 @@ python3 jerryscript/tools/build.py \
   --jerry-cmdline=OFF
 make -C $(pwd)/example_build install\
 
-cd ~/csprig/jerry
+cd ~/spade/rpi/jerry
 cp ~/jerryscript_build/example_build/lib/* lib/
 # cp ~/jerryscript_build/example_install/include
 rm -rf include
