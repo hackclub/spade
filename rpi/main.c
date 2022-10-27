@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include "pico/stdlib.h"
 #include "hardware/spi.h"
@@ -7,6 +8,7 @@
 #include "pico/multicore.h"
 
 #include "ST7735_TFT.h"
+#include "upload.h"
 
 #define ARR_LEN(arr) (sizeof(arr) / sizeof(arr[0]))
 
@@ -51,7 +53,8 @@ static void button_init(void) {
   }
 }
 
-queue_t button_queue;
+// queue_t button_queue;
+// typedef struct { int pin; } ButtonPress;
 static void button_poll(void) {
   for (int i = 0; i < ARR_LEN(button_pins); i++) {
     ButtonState *bs = button_states + i;
@@ -78,7 +81,11 @@ static void button_poll(void) {
     if (on && bs->edge) {
       bs->edge = 0;
 
-      queue_add_blocking(&button_queue, button_pins + i);
+      // spade_call_press(button_pins[i]);
+
+      // queue_add_blocking(&button_queue, &(ButtonPress) { .pin = button_pins[i] });
+      multicore_fifo_push_blocking(button_pins[i]);
+
       //      if (button_pins[i] == 8) map_move(map_get_first('p'),  1,  0);
       // else if (button_pins[i] == 6) map_move(map_get_first('p'), -1,  0);
       // else if (button_pins[i] == 7) map_move(map_get_first('p'),  0,  1);
@@ -98,7 +105,7 @@ static void core1_entry(void) {
 int main() {
   stdio_init_all();
 
-  queue_init(&button_queue, sizeof(uint8_t), 32);
+  // queue_init(&button_queue, sizeof(ButtonPress), 32);
   multicore_launch_core1(core1_entry);
 
   st7735_init();
@@ -109,17 +116,32 @@ int main() {
 
   absolute_time_t last = get_absolute_time();
   while(1) {
-    js_promises();
+    /* input handling */
+    // ButtonPress press = {0};
+    while (multicore_fifo_rvalid())
+      spade_call_press(multicore_fifo_pop_blocking());
 
-    uint8_t pin = 0;
-    while (queue_try_remove(&button_queue, &pin))
-      spade_call_press(pin);
-
+    /* setTimeout/setInterval impl */
     absolute_time_t now = get_absolute_time();
     int elapsed = us_to_ms(absolute_time_diff_us(last, now));
     last = now;
     spade_call_frame(elapsed);
+    js_promises();
 
+    /* upload new scripts */
+    upl_stdin_read();
+    if (upl_state.prog == UplProg_Done && upl_state.str) {
+      puts(upl_state.str);
+      init(sprite_free_jerry_object); /* gosh i should namespace base engine */
+      js_init_with(upl_state.str, strlen(upl_state.str));
+
+      free(upl_state.str);
+      memset(&upl_state, 0, sizeof(upl_state));
+
+      puts("done!");
+    }
+
+    /* render */
     uint16_t screen[160 * 128] = {0};
     render(screen);
     st7735_fill(screen);

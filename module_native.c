@@ -1,23 +1,12 @@
-/* Copyright (c) 2017 Pico
- *
- * Permission is hereby granted, free of charge, to any person obtaining a copy
- * of this software and associated documentation files (the "Software"), to deal
- * in the Software without restriction, including without limitation the rights
- * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
- * copies of the Software, and to permit persons to whom the Software is
- * furnished to do so, subject to the following conditions:
- *
- * The above copyright notice and this permission notice shall be included in
- * all copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
- * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
- * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
- * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
- * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
- * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
- * SOFTWARE.
- */
+static struct {
+  jerry_value_t x, y, dx, dy, addr, type, _x, _y, _type, push, remove, generation;
+  jerry_property_descriptor_t  x_prop_desc,  y_prop_desc, type_prop_desc,
+                              dx_prop_desc, dy_prop_desc;
+  jerry_value_t sprite_remove;
+} props = {0};
+
+static jerry_value_t sprite_object_pool[SPRITE_COUNT] = {0};
+
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -129,18 +118,6 @@ JERRYXX_FUN(native_push_table_clear_fn) {
 JERRYXX_FUN(native_map_clear_deltas_fn) { 
   dbg("module_native::native_map_clear_deltas_fn");
   map_clear_deltas(); return jerry_create_undefined(); }
-
-/* I may be recreating kaluma's MAGIC_STRINGs thing here,
-   I'd have to look more into how it works */
-/* edit: kaluma's MAGIC_STRING thing is for snapshots,
- * which are, yeah, kind of the most extreme version of this.
- * this is still useful though */
-static struct {
-  jerry_value_t x, y, dx, dy, addr, type, _x, _y, _type, push, remove, generation;
-  jerry_property_descriptor_t  x_prop_desc,  y_prop_desc, type_prop_desc,
-                              dx_prop_desc, dy_prop_desc;
-  jerry_value_t sprite_remove;
-} props = {0};
 
 /* lifetime: creates a jerry_value_t you need to free!!! */
 static jerry_value_t sprite_to_jerry_addr(Sprite *s) {
@@ -376,7 +353,6 @@ static jerry_value_t sprite_alloc_jerry_object(Sprite *s) {
   return ret;
 }
 
-jerry_value_t sprite_object_pool[SPRITE_COUNT] = {0};
 static jerry_value_t sprite_to_jerry_object(Sprite *s) {
   if (s == 0) return jerry_create_undefined();
 
@@ -470,7 +446,7 @@ JERRYXX_FUN(addSprite) {
   if (s == 0)
     return jerry_create_error(
       JERRY_ERROR_COMMON,
-      (jerry_char_t *)"can't add sprite to location outside of map"
+      (jerry_char_t *)"addSprite failed: sprite out of bounds, or too many sprites"
     );
   else
     return sprite_to_jerry_object(s);
@@ -648,6 +624,8 @@ JERRYXX_FUN(native_text_clear_fn) {
 
 
 static void module_native_init(jerry_value_t exports) {
+  memset(sprite_object_pool, 0, sizeof(sprite_object_pool));
+  memset(&props,             0, sizeof(props));
 
   props_init();
 

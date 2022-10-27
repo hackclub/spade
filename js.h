@@ -6,12 +6,7 @@ static struct {
   jerry_value_t press_cb, frame_cb;
 } spade_state = {0};
 
-static void js_init(void) {
-  const jerry_char_t script[] = 
-#include "engine.js.cstring"
-  ;
-
-  const jerry_length_t script_size = sizeof (script) - 1;
+static void js_init_with(const jerry_char_t *script, jerry_length_t script_size) {
 
   /* Initialize engine */
   jerry_init (JERRY_INIT_MEM_STATS);
@@ -156,3 +151,15 @@ static void spade_call_frame(double dt) {
   jerry_release_value(this_value);
 }
 
+static void js_init(void) {
+  const jerry_char_t script[] = 
+#include "engine.js.cstring"
+  ;
+
+  const jerry_length_t script_size = sizeof (script) - 1;
+  js_init_with(script, script_size);
+}
+
+static void js_cleanup() {
+  jerry_cleanup();
+}

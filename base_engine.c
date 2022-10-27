@@ -72,7 +72,7 @@ typedef struct { Sprite *sprite; int x, y; uint8_t dirty; } MapIter;
 
 #define PER_CHAR (255)
 #define PER_DOODLE (40)
-#define SPRITE_COUNT (256)
+#define SPRITE_COUNT (512)
 
 #define MAP_SIZE_X (20)
 #define MAP_SIZE_Y (20)
@@ -455,6 +455,8 @@ WASM_EXPORT Sprite *map_add(int x, int y, char kind) {
   if (y < 0 || y >= state->height) return 0;
 
   Sprite *s = map_alloc();
+  if (s == 0) return 0;
+  
   *s = (Sprite) { .x = x, .y = y, .kind = kind };
   // dbg("assigned to that mf");
   map_plop(s);
