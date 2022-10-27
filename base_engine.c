@@ -728,6 +728,22 @@ WASM_EXPORT void push_table_clear(void) {
   __builtin_memset(&state->push_table, 0, sizeof(state->push_table));
 }
 
+void render_errorbuf(Color *screen) {
+  int y = 0;
+  int x = 0;
+  for (int i = 0; i < sizeof(errorbuf); i++) {
+    if (errorbuf[i] == '\0') break;
+    if (errorbuf[i] == '\n' || x >= (SCREEN_SIZE_X / 8)) {
+      y++;
+      x = 0;
+      if (errorbuf[i] == '\n') continue;
+    }
+    if (y >= (SCREEN_SIZE_Y / 8)) break;
+    render_char(screen, errorbuf[i], color16(255, 0, 0), x*8, y*8);
+    x++;
+  }
+}
+
 #if 0
 void text_add(char *str, int x, int y, uint32_t color);
 Sprite *sprite_add(int x, int y, char kind);

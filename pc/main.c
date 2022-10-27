@@ -13,6 +13,7 @@
 #define yell puts
 
 static void oom(void) { yell("oom!"); abort(); }
+char errorbuf[512] = "";
 #include "base_engine.c"
 
 #include "jerryscript.h"
@@ -63,6 +64,7 @@ int main() {
 
     memset(screen, 0, sizeof(screen));
     render((Color *) screen); /* baseengine */
+    render_errorbuf(screen);
 
     uint8_t ok = STATE_OK == mfb_update_ex(window, screen, SCREEN_SIZE_X, SCREEN_SIZE_Y);
     if (!ok) {
