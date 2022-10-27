@@ -601,16 +601,9 @@ JERRYXX_FUN(native_text_add_fn) {
 
   jerry_value_t color_val = JERRYXX_GET_ARG(1);
 
-  uint8_t color[3] = {0};
-  for (int i = 0; i < 3; i++) {
-    jerry_value_t el = jerry_get_property_by_index(color_val, i);
-    color[i] = jerry_get_number_value(el);
-    jerry_release_value(el);
-  }
-
   text_add(
     tmp,
-    color16(color[0], color[1], color[2]),
+    jerry_value_to_char(JERRYXX_GET_ARG(1)),
     JERRYXX_GET_ARG_NUMBER(2),
     JERRYXX_GET_ARG_NUMBER(3) 
   );

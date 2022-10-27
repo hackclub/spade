@@ -166,10 +166,10 @@ static uint8_t push_table_read(char x_char, char y_char) {
   return !!(state->push_table[i/8] & q);
 }
 
-WASM_EXPORT void text_add(char *str, Color color, int x, int y) {
+WASM_EXPORT void text_add(char *str, char palette_index, int x, int y) {
   for (; *str; str++, x++)
     state->text_char [y][x] = *str,
-    state->text_color[y][x] = color;
+    state->text_color[y][x] = state->render->palette[(int)palette_index];
 }
 
 WASM_EXPORT void text_clear(void) {
