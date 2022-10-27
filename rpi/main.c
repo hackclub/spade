@@ -22,6 +22,7 @@
 #endif
 
 static void oom(void) { puts("oom!"); }
+char errorbuf[512] = "";
 #include "base_engine.c"
 
 #include "jerryscript.h"
@@ -144,6 +145,7 @@ int main() {
     /* render */
     uint16_t screen[160 * 128] = {0};
     render(screen);
+    render_errorbuf(screen);
     st7735_fill(screen);
   }
   return 0;

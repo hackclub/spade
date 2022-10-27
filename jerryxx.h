@@ -25,6 +25,7 @@
 #include <stdio.h>
 
 #include "jerryscript.h"
+#include "errorbuf.h"
 
 #define JERRYXX_FUN(name)                                           \
   static jerry_value_t name(                                        \
@@ -267,6 +268,7 @@ bool jerryxx_delete_property(jerry_value_t object, const char *name);
 
 // print functions
 void jerryxx_print_value(jerry_value_t value);
+void jerryxx_strlcat_value(char *dest, jerry_value_t src, size_t size);
 void jerryxx_print_error(jerry_value_t value, bool print_stacktrace);
 
 // string functions

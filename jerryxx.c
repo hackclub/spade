@@ -155,43 +155,59 @@ void jerryxx_print_value(jerry_value_t value) {
 
   jerry_release_value(str);
 }
+
+void jerryxx_strlcat_value(char *dest, jerry_value_t src, size_t size) {
+  jerry_value_t str = jerry_value_to_string(src);
+  jerry_size_t str_sz = jerry_get_string_size(str);
+  jerry_char_t str_buf[str_sz + 1];
+  memset(str_buf, 0, str_sz + 1);
+  jerry_string_to_char_buffer(str, str_buf, str_sz);
+  strlcat(dest, (const char *) str_buf, size);
+  jerry_release_value(str);
+}
+
 /**
  * Print error with stacktrace
  */
 void jerryxx_print_error(jerry_value_t value, bool print_stacktrace) {
+  memset(errorbuf, 0, sizeof(errorbuf));
+  
   jerry_value_t error_value = jerry_get_value_from_error(value, false);
-  // print error message
   jerry_value_t err_str = jerry_value_to_string(error_value);
-  puts("err:");
-  jerryxx_print_value(err_str);
-  puts("");
+
+  jerryxx_strlcat_value(errorbuf, err_str, sizeof(errorbuf) - strlen(errorbuf) - 1);
   jerry_release_value(err_str);
+  strlcat(errorbuf, "\n", sizeof(errorbuf));
+
   // print stack trace
   if (print_stacktrace && jerry_value_is_object(error_value)) {
-    jerry_value_t stack_str =
-        jerry_create_string((const jerry_char_t *)"stack");
+    jerry_value_t stack_str = jerry_create_string((const jerry_char_t *)"stack");
     jerry_value_t backtrace_val = jerry_get_property(error_value, stack_str);
     jerry_release_value(stack_str);
-    if (!jerry_value_is_error(backtrace_val) &&
-        jerry_value_is_array(backtrace_val)) {
+
+    if (!jerry_value_is_error(backtrace_val) && jerry_value_is_array(backtrace_val)) {
       uint32_t length = jerry_get_array_length(backtrace_val);
       if (length > 32) {
         length = 32;
       } /* max length: 32 */
+      
       for (uint32_t i = 0; i < length; i++) {
         jerry_value_t item_val = jerry_get_property_by_index(backtrace_val, i);
-        if (!jerry_value_is_error(item_val) &&
-            jerry_value_is_string(item_val)) {
-          printf("  at ");
-          jerryxx_print_value(item_val);
-          puts("");
+        if (!jerry_value_is_error(item_val) && jerry_value_is_string(item_val)) {
+          strlcat(errorbuf, "  at ", sizeof(errorbuf));
+          jerryxx_strlcat_value(errorbuf, item_val, sizeof(errorbuf));
+          strlcat(errorbuf, "\n", sizeof(errorbuf));
         }
         jerry_release_value(item_val);
       }
     }
     jerry_release_value(backtrace_val);
   }
-  jerry_release_value(error_value);}
+  jerry_release_value(error_value);
+
+  puts("err:");
+  puts(errorbuf);
+}
 
 jerry_size_t jerryxx_get_ascii_string_size(const jerry_value_t value) {
   return jerry_get_string_length(value);

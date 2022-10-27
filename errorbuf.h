@@ -1,0 +1,1 @@
+extern char errorbuf[512]; // Buffer for error messages
