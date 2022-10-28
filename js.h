@@ -98,10 +98,6 @@ static void js_promises(void) {
     else
       break;
   }
-
-  // jerry_heap_stats_t stats = {0};
-  // if (jerry_get_memory_stats(&stats))
-  //   printf("%f\n", (float)stats.allocated_bytes/(float)stats.size);
 }
 
 static void spade_call_press(int pin) {

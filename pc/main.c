@@ -24,6 +24,10 @@ static void module_native_init(jerry_value_t exports);
 #include "js.h"
 #include "module_native.c"
 
+#define SPADE_WIN_SIZE_X (SCREEN_SIZE_X)
+#define SPADE_WIN_SIZE_Y (SCREEN_SIZE_Y + 3*8)
+#define SPADE_WIN_SCALE (2)
+
 static void keyboard(struct mfb_window *window, mfb_key key, mfb_key_mod mod, bool isPressed) {
   (void) window;
   if (!isPressed) return;
@@ -40,19 +44,59 @@ static void keyboard(struct mfb_window *window, mfb_key key, mfb_key_mod mod, bo
   if (key == KB_KEY_L) spade_call_press(15); // map_move(map_get_first('p'), -1,  0);
 }
 
+int peak_bitmap_count = 0;
+int peak_sprite_count = 0;
+void render_stats(Color *screen) {
+  /*
+  +1 on mem because sprintf might write an extra null term, doesn't matter for others
+  bc they shouldn't get to filling the buffer
+
+  format with assumed max lengths:
+
+  --------------------
+  mem: 1000kB (1000kB)
+  bitmaps: 100 (100)
+  sprites: 100 (100)
+  maps: 100 (100)
+  */
+  char mem[20 * 8 + 1] = "";
+  char bitmaps[20 * 8] = "";
+  char sprites[20 * 8] = "";
+
+  Color mem_color = color16(255, 255, 255);
+  jerry_heap_stats_t stats = {0};
+  if (jerry_get_memory_stats(&stats)) {
+    sprintf(mem, "mem: %dkB (%dkB)", stats.allocated_bytes / 1000, stats.peak_allocated_bytes / 1000);
+    if (stats.peak_allocated_bytes > 200000) mem_color = color16(255, 255, 0);
+    if (stats.allocated_bytes > 200000) mem_color = color16(255, 0, 0);
+  }
+
+  int bitmap_count = state->render->doodle_index_count;
+  if (bitmap_count > peak_bitmap_count) peak_bitmap_count = bitmap_count;
+  sprintf(bitmaps, "bitmaps: %d (%d)", bitmap_count, peak_bitmap_count);
+
+  int sprite_count = 0;
+  for (int i = 0; i < SPRITE_COUNT; i++) {
+    if (state->sprite_slot_active[i] != 0) sprite_count++;
+  }
+  if (sprite_count > peak_sprite_count) peak_sprite_count = sprite_count;
+  sprintf(sprites, "sprites: %d (%d)", sprite_count, peak_sprite_count);
+
+  for (int i = 0; i < 20 * 8; i++) {
+    if (mem[i] != '\0') render_char(screen, mem[i], mem_color, i*8, SCREEN_SIZE_Y);
+    if (bitmaps[i] != '\0') render_char(screen, bitmaps[i], color16(255, 255, 255), i*8, SCREEN_SIZE_Y + 8);
+    if (sprites[i] != '\0') render_char(screen, sprites[i], color16(255, 255, 255), i*8, SCREEN_SIZE_Y + 16);
+  }
+}
+
 int main() {
-  struct mfb_window *window = mfb_open_ex(
-    "spade - sprigtestbed",
-    SCREEN_SIZE_X,
-    SCREEN_SIZE_Y,
-    0
-  );
-  if (!window) return 0;
+  struct mfb_window *window = mfb_open_ex("spade", SPADE_WIN_SIZE_X * 2, SPADE_WIN_SIZE_Y * 2, 0);
+  if (!window) return 1;
   mfb_set_keyboard_callback(window, keyboard);
 
   init(sprite_free_jerry_object); /* god i REALLY need to namespace baseengine */
   js_init();
-  Color screen[SCREEN_SIZE_Y * SCREEN_SIZE_X] = {0};
+  Color screen[SPADE_WIN_SIZE_X * SPADE_WIN_SIZE_Y] = {0};
 
   struct mfb_timer *lastframe = mfb_timer_create();
   mfb_timer_now(lastframe);
@@ -65,8 +109,9 @@ int main() {
     memset(screen, 0, sizeof(screen));
     render((Color *) screen); /* baseengine */
     render_errorbuf(screen);
+    render_stats(screen);
 
-    uint8_t ok = STATE_OK == mfb_update_ex(window, screen, SCREEN_SIZE_X, SCREEN_SIZE_Y);
+    uint8_t ok = STATE_OK == mfb_update_ex(window, screen, SPADE_WIN_SIZE_X, SPADE_WIN_SIZE_Y);
     if (!ok) {
       window = 0x0;
       break;

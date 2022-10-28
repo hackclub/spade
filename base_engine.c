@@ -71,13 +71,14 @@ static uint8_t map_active(Sprite *s, uint32_t generation);
 typedef struct { Sprite *sprite; int x, y; uint8_t dirty; } MapIter;
 
 #define PER_CHAR (255)
-#define PER_DOODLE (40)
+#define PER_DOODLE (120)
 #define SPRITE_COUNT (512)
 
 #define MAP_SIZE_X (20)
 #define MAP_SIZE_Y (20)
 #define SCREEN_SIZE_X (160)
 #define SCREEN_SIZE_Y (128)
+
 typedef struct {
   Color palette[PER_CHAR];
   uint8_t lit[SCREEN_SIZE_Y * SCREEN_SIZE_X / 8];
