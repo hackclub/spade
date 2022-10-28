@@ -53,9 +53,14 @@ static float signf(float f) {
 #define TEXT_CHARS_MAX_Y (16)
 
 #define SPRITE_SIZE (16)
+#define DOODLE_PANE_SIZE (SPRITE_SIZE*SPRITE_SIZE / 8)
 typedef struct {
-  Color       pixels[SPRITE_SIZE][SPRITE_SIZE];
-  uint8_t     lit[SPRITE_SIZE*SPRITE_SIZE / 8];
+  /* doodles have 5 panes */
+  uint8_t lit [DOODLE_PANE_SIZE];
+  uint8_t rgb0[DOODLE_PANE_SIZE];
+  uint8_t rgb1[DOODLE_PANE_SIZE];
+  uint8_t rgb2[DOODLE_PANE_SIZE];
+  uint8_t rgb3[DOODLE_PANE_SIZE];
 } Doodle;
 
 typedef struct Sprite Sprite;
@@ -79,7 +84,7 @@ typedef struct { Sprite *sprite; int x, y; uint8_t dirty; } MapIter;
 #define SCREEN_SIZE_X (160)
 #define SCREEN_SIZE_Y (128)
 typedef struct {
-  Color palette[PER_CHAR];
+  Color palette[16];
   uint8_t lit[SCREEN_SIZE_Y * SCREEN_SIZE_X / 8];
   
   int scale;
@@ -125,6 +130,28 @@ typedef struct {
 } State;
 static State *state = 0;
 
+static uint8_t char_to_palette_index(char c) {
+  switch (c) {
+    case '0': return  0;
+    case 'L': return  1;
+    case '1': return  2;
+    case '2': return  3;
+    case '3': return  4;
+    case 'C': return  5;
+    case '7': return  6;
+    case '5': return  7;
+    case '6': return  8;
+    case 'F': return  9;
+    case '4': return 10;
+    case 'D': return 11;
+    case '8': return 12;
+    case 'H': return 13;
+    case '9': return 14;
+    case '.': return 15;
+    default: return 0; /* lmfao */
+  }
+}
+
 /* almost makes ya wish for generic data structures dont it :shushing_face:
 
    this was implemented to cut down on RAM usage before I discovered you can
@@ -140,14 +167,14 @@ static uint8_t render_lit_read(int x, int y) {
   return !!(state->render->lit[i/8] & q);
 }
 
-static void doodle_lit_write(Doodle *d, int x, int y) {
+static void doodle_pane_write(uint8_t *pane, int x, int y) {
   int i = y*SPRITE_SIZE + x;
-  d->lit[i/8] |= 1 << (i % 8);
+  pane[i/8] |= 1 << (i % 8);
 }
-static uint8_t doodle_lit_read(Doodle *d, int x, int y) {
+static uint8_t doodle_pane_read(uint8_t *pane, int x, int y) {
   int i = y*SPRITE_SIZE + x;
   int q = 1 << (i % 8);
-  return !!(d->lit[i/8] & q);
+  return !!(pane[i/8] & q);
 }
 
 static void push_table_write(char x_char, char y_char) {
@@ -169,7 +196,7 @@ static uint8_t push_table_read(char x_char, char y_char) {
 WASM_EXPORT void text_add(char *str, char palette_index, int x, int y) {
   for (; *str; str++, x++)
     state->text_char [y][x] = *str,
-    state->text_color[y][x] = state->render->palette[(int)palette_index];
+    state->text_color[y][x] = state->render->palette[char_to_palette_index(palette_index)];
 }
 
 WASM_EXPORT void text_clear(void) {
@@ -208,22 +235,22 @@ WASM_EXPORT void init(void (*map_free_cb)(Sprite *)) {
 
 
   // Grey
-  state->render->palette['0'] = color16(  0,   0,   0);
-  state->render->palette['L'] = color16( 73,  80,  87);
-  state->render->palette['1'] = color16(145, 151, 156);
-  state->render->palette['2'] = color16(248, 249, 250);
-  state->render->palette['3'] = color16(235,  44,  71);
-  state->render->palette['C'] = color16(139,  65,  46);
-  state->render->palette['7'] = color16( 25, 177, 248);
-  state->render->palette['5'] = color16( 19,  21, 224);
-  state->render->palette['6'] = color16(254, 230,  16);
-  state->render->palette['F'] = color16(149, 140,  50);
-  state->render->palette['4'] = color16( 45, 225,  62);
-  state->render->palette['D'] = color16( 29, 148,  16);
-  state->render->palette['8'] = color16(245, 109, 187);
-  state->render->palette['H'] = color16(170,  58, 197);
-  state->render->palette['9'] = color16(245, 113,  23);
-  state->render->palette['.'] = color16(  0,   0,   0);
+  state->render->palette[char_to_palette_index('0')] = color16(  0,   0,   0);
+  state->render->palette[char_to_palette_index('L')] = color16( 73,  80,  87);
+  state->render->palette[char_to_palette_index('1')] = color16(145, 151, 156);
+  state->render->palette[char_to_palette_index('2')] = color16(248, 249, 250);
+  state->render->palette[char_to_palette_index('3')] = color16(235,  44,  71);
+  state->render->palette[char_to_palette_index('C')] = color16(139,  65,  46);
+  state->render->palette[char_to_palette_index('7')] = color16( 25, 177, 248);
+  state->render->palette[char_to_palette_index('5')] = color16( 19,  21, 224);
+  state->render->palette[char_to_palette_index('6')] = color16(254, 230,  16);
+  state->render->palette[char_to_palette_index('F')] = color16(149, 140,  50);
+  state->render->palette[char_to_palette_index('4')] = color16( 45, 225,  62);
+  state->render->palette[char_to_palette_index('D')] = color16( 29, 148,  16);
+  state->render->palette[char_to_palette_index('8')] = color16(245, 109, 187);
+  state->render->palette[char_to_palette_index('H')] = color16(170,  58, 197);
+  state->render->palette[char_to_palette_index('9')] = color16(245, 113,  23);
+  state->render->palette[char_to_palette_index('.')] = color16(  0,   0,   0);
 }
 
 WASM_EXPORT char *temp_str_mem(void) {
@@ -262,9 +289,13 @@ static void render_resize_legend(void) {
         int rx = (float) x / 16.0f * state->tile_size;
         int ry = (float) y / 16.0f * state->tile_size;
 
-        if (!doodle_lit_read(od, x, y)) continue;
-        rd->pixels[ry][rx] = od->pixels[y][x];
-        if (doodle_lit_read(od, x, y)) doodle_lit_write(rd, rx, ry);
+        if (!doodle_pane_read(od->lit, x, y)) continue;
+                                              doodle_pane_write(rd->lit , rx, ry);
+        if (doodle_pane_read(od->rgb0, x, y)) doodle_pane_write(rd->rgb0, rx, ry);
+        if (doodle_pane_read(od->rgb1, x, y)) doodle_pane_write(rd->rgb1, rx, ry);
+        if (doodle_pane_read(od->rgb2, x, y)) doodle_pane_write(rd->rgb2, rx, ry);
+        if (doodle_pane_read(od->rgb3, x, y)) doodle_pane_write(rd->rgb3, rx, ry);
+        // if (doodle_pane_read(od->lit , x, y)) doodle_pane_write(rd->lit , rx, ry);
       }
   }
 }
@@ -276,7 +307,7 @@ static void render_blit_sprite(Color *screen, int sx, int sy, char kind) {
   for (int x = 0; x < state->tile_size; x++)
     for (int y = 0; y < state->tile_size; y++) {
 
-      if (!doodle_lit_read(d, x, y)) continue;
+      if (!doodle_pane_read(d->lit, x, y)) continue;
       for (  int ox = 0; ox < scale; ox++)
         for (int oy = 0; oy < scale; oy++) {
           int px = ox + sx + scale*x;
@@ -290,7 +321,12 @@ static void render_blit_sprite(Color *screen, int sx, int sy, char kind) {
 #else
           int i = SCREEN_SIZE_X*py + px;
 #endif
-          screen[i] = d->pixels[y][x];
+          screen[i] = state->render->palette[
+            (doodle_pane_read(d->rgb0, x, y) << 0) |
+            (doodle_pane_read(d->rgb1, x, y) << 1) |
+            (doodle_pane_read(d->rgb2, x, y) << 2) |
+            (doodle_pane_read(d->rgb3, x, y) << 3)
+          ];
         }
     }
 }
@@ -704,8 +740,12 @@ WASM_EXPORT void legend_doodle_set(char kind, char *str) {
       case  '.': px++;         break;
       case '\0':               break;
       default: {
-        d->pixels[py][px] = state->render->palette[(int)*str];
-        doodle_lit_write(d, px, py);
+        int pi = char_to_palette_index(*str);
+        if (pi & (1 << 0)) doodle_pane_write(d->rgb0, px, py);
+        if (pi & (1 << 1)) doodle_pane_write(d->rgb1, px, py);
+        if (pi & (1 << 2)) doodle_pane_write(d->rgb2, px, py);
+        if (pi & (1 << 3)) doodle_pane_write(d->rgb3, px, py);
+        doodle_pane_write(d->lit, px, py);
         px++;
       } break;
     }

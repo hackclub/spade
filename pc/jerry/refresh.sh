@@ -14,7 +14,7 @@ python3 jerryscript/tools/build.py \
 make -C $(pwd)/example_build install\
 
 cd ~/spade/pc/jerry
-cp ~/jerryscript_build/example_build/lib/* lib/
+cp -r ~/jerryscript_build/example_build/lib ./
 # cp ~/jerryscript_build/example_install/include
 rm -rf include
 # cp ~/jerryscript_build/example_install/include ./
