@@ -66,7 +66,7 @@ void render_stats(Color *screen) {
   Color mem_color = color16(255, 255, 255);
   jerry_heap_stats_t stats = {0};
   if (jerry_get_memory_stats(&stats)) {
-    sprintf(mem, "mem: %dkB (%dkB)", stats.allocated_bytes / 1000, stats.peak_allocated_bytes / 1000);
+    sprintf(mem, "mem: %lukB (%lukB)", stats.allocated_bytes / 1000, stats.peak_allocated_bytes / 1000);
     if (stats.peak_allocated_bytes > 200000) mem_color = color16(255, 255, 0);
     if (stats.allocated_bytes > 200000) mem_color = color16(255, 0, 0);
   }
