@@ -196,6 +196,11 @@ int main() {
 
   multicore_launch_core1(core1_entry);
 
+  sleep_ms(50);
+
+  /* drain keypresses */
+  while (multicore_fifo_rvalid()) multicore_fifo_pop_blocking();
+
   while(!multicore_fifo_rvalid()) {
     uint16_t screen[160 * 128] = {0};
     strcpy(errorbuf, "                    \n"
@@ -215,9 +220,13 @@ int main() {
                      " sprig.hackclub.dev \n");
     render_errorbuf(screen);
     st7735_fill(screen);
+
+    load_new_scripts();
   }
   memset(errorbuf, 0, sizeof(errorbuf));
-  multicore_fifo_pop_blocking();
+
+  /* drain keypresses */
+  while (multicore_fifo_rvalid()) multicore_fifo_pop_blocking();
 
   game_init();
 

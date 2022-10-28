@@ -1,5 +1,6 @@
 build/
 pc_build/
+rpi_build/
 .DS_Store
 pc/jerry/include
 pc/jerry/lib
