@@ -76,7 +76,7 @@ static uint8_t map_active(Sprite *s, uint32_t generation);
 typedef struct { Sprite *sprite; int x, y; uint8_t dirty; } MapIter;
 
 #define PER_CHAR (255)
-#define PER_DOODLE (40)
+#define PER_DOODLE (100)
 #define SPRITE_COUNT (512)
 
 #define MAP_SIZE_X (20)
@@ -148,7 +148,8 @@ static uint8_t char_to_palette_index(char c) {
     case 'H': return 13;
     case '9': return 14;
     case '.': return 15;
-    default: return 0; /* lmfao */
+    default: return 0; /* lmfao (anything to quiet the voices.)
+                                (i meant clang warnings. same thing) */
   }
 }
 
