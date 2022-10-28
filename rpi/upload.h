@@ -27,9 +27,12 @@ static void upl_stdin_read(void) {
         }
       } break;
       case UplProg_Body: {
+        // printf("upl char (%d/%d)\n", upl_state.len_i, upl_state.len);
         upl_state.str[upl_state.len_i++] = c;
-        if (upl_state.len_i == upl_state.len)
+        if (upl_state.len_i == upl_state.len) {
+          printf("read %d chars\n", upl_state.len);
           upl_state.prog = UplProg_Done;
+        }
       } break;
       case UplProg_Done: {} break;
     }

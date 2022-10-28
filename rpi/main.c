@@ -54,8 +54,6 @@ static void button_init(void) {
   }
 }
 
-// queue_t button_queue;
-// typedef struct { int pin; } ButtonPress;
 static void button_poll(void) {
   for (int i = 0; i < ARR_LEN(button_pins); i++) {
     ButtonState *bs = button_states + i;
@@ -103,22 +101,129 @@ static void core1_entry(void) {
   }
 }
 
+#include "hardware/flash.h"
+
+/* rationale: half engine, half games? */
+/* NOTE: this has to be a multiple of 4096 (FLASH_SECTOR_SIZE) */
+#define FLASH_TARGET_OFFSET (512 * 1024)
+
+const uint8_t *flash_target_contents = (const uint8_t *) (XIP_BASE + FLASH_TARGET_OFFSET);
+uint16_t SPRIG_MAGIC[FLASH_PAGE_SIZE/2] = { 1337, 42, 69, 420, 420, 1337 };
+static const char *save_read(void) {
+  if (memcmp(&SPRIG_MAGIC, flash_target_contents, sizeof(SPRIG_MAGIC)) != 0) {
+    puts("no magic :(");
+    return NULL;
+  }
+
+  /* add a page to get what's after the magic */
+  const char *save = flash_target_contents + FLASH_PAGE_SIZE;
+  return save;
+}
+static void save_write(char *game) {
+  int char_len   = strlen(game) + 1;
+  /* one page to round up, another page for magic */
+  int page_len   = (char_len/FLASH_PAGE_SIZE   + 2) * FLASH_PAGE_SIZE  ;
+  int sector_len = (page_len/FLASH_SECTOR_SIZE + 1) * FLASH_SECTOR_SIZE;
+
+  uint32_t interrupts = save_and_disable_interrupts();
+
+  /* have to first erase so you can later write */
+  /* see: https://github.com/raspberrypi/pico-sdk/issues/650 */
+  flash_range_erase(FLASH_TARGET_OFFSET, sector_len);
+
+  flash_range_program(FLASH_TARGET_OFFSET + FLASH_PAGE_SIZE, game, page_len);
+
+  /* magic last reduces changes of half-wrote game being seen as valid */
+  flash_range_program(FLASH_TARGET_OFFSET, (void *)SPRIG_MAGIC, FLASH_PAGE_SIZE);
+
+  restore_interrupts(interrupts);
+}
+
+static void game_init(void) {
+  /* init base engine */
+  init(sprite_free_jerry_object); /* gosh i should namespace base engine */
+
+  /* init js */
+  js_init_with(save_read(), strlen(save_read()));
+}
+
+static uint8_t load_new_scripts(void) {
+  upl_stdin_read();
+  if (upl_state.prog == UplProg_Done && upl_state.str) {
+    puts("saving string to flash");
+
+    /* save the string to flash */
+    /* TODO: okay to not save if err on startup? */
+    save_write(upl_state.str);
+
+    /* free string, reset upl_state */
+    free(upl_state.str);
+    memset(&upl_state, 0, sizeof(upl_state));
+
+    puts("done!");
+    return 1;
+  }
+  return 0;
+}
+
 int main() {
   stdio_init_all();
 
-  // queue_init(&button_queue, sizeof(ButtonPress), 32);
-  multicore_launch_core1(core1_entry);
-
   st7735_init();
 
-  init(sprite_free_jerry_object); /* gosh i should namespace base engine */
+  while(!save_read()) {
+    uint16_t screen[160 * 128] = {0};
+    strcpy(errorbuf, "                    \n"
+                     "                    \n"
+                     "                    \n"
+                     "                    \n"
+                     "                    \n"
+                     "                    \n"
+                     "                    \n"
+                     "    PLEASE UPLOAD   \n"
+                     "       A GAME       \n"
+                     "                    \n"
+                     "                    \n"
+                     "                    \n"
+                     "                    \n"
+                     "                    \n"
+                     " sprig.hackclub.dev \n");
+    render_errorbuf(screen);
+    st7735_fill(screen);
 
-  js_init();
+    load_new_scripts();
+  }
+
+  multicore_launch_core1(core1_entry);
+
+  while(!multicore_fifo_rvalid()) {
+    uint16_t screen[160 * 128] = {0};
+    strcpy(errorbuf, "                    \n"
+                     "                    \n"
+                     "                    \n"
+                     "                    \n"
+                     "                    \n"
+                     "                    \n"
+                     "                    \n"
+                     "    PRESS ANY KEY   \n"
+                     "       TO RUN       \n"
+                     "                    \n"
+                     "                    \n"
+                     "                    \n"
+                     "                    \n"
+                     "                    \n"
+                     " sprig.hackclub.dev \n");
+    render_errorbuf(screen);
+    st7735_fill(screen);
+  }
+  memset(errorbuf, 0, sizeof(errorbuf));
+  multicore_fifo_pop_blocking();
+
+  game_init();
 
   absolute_time_t last = get_absolute_time();
   while(1) {
     /* input handling */
-    // ButtonPress press = {0};
     while (multicore_fifo_rvalid())
       spade_call_press(multicore_fifo_pop_blocking());
 
@@ -130,17 +235,8 @@ int main() {
     js_promises();
 
     /* upload new scripts */
-    upl_stdin_read();
-    if (upl_state.prog == UplProg_Done && upl_state.str) {
-      puts(upl_state.str);
-      init(sprite_free_jerry_object); /* gosh i should namespace base engine */
-      js_init_with(upl_state.str, strlen(upl_state.str));
-
-      free(upl_state.str);
-      memset(&upl_state, 0, sizeof(upl_state));
-
-      puts("done!");
-    }
+    if (load_new_scripts())
+      game_init();
 
     /* render */
     uint16_t screen[160 * 128] = {0};
