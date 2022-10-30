@@ -1,3 +1,5 @@
+set -e
+
 cd ~/jerryscript_build
 rm -rf example-*
 
@@ -5,7 +7,7 @@ rm -rf example-*
 python3 jerryscript/tools/build.py \
   --builddir=$(pwd)/example_build \
   --cmake-param="-DCMAKE_INSTALL_PREFIX=$(pwd)/example_install/" \
-  --mem-heap=100 \
+  --mem-heap=2000 \
   --clean \
   --error-messages=ON \
   --mem-stats=ON \

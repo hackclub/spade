@@ -83,6 +83,7 @@ typedef struct { Sprite *sprite; int x, y; uint8_t dirty; } MapIter;
 #define MAP_SIZE_Y (20)
 #define SCREEN_SIZE_X (160)
 #define SCREEN_SIZE_Y (128)
+
 typedef struct {
   Color palette[16];
   uint8_t lit[SCREEN_SIZE_Y * SCREEN_SIZE_X / 8];
