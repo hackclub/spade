@@ -109,9 +109,8 @@ static void game_init(void) {
   js_init_with(save_read(), strlen(save_read()));
 }
 
-static uint8_t load_new_scripts(void) {
-  upl_stdin_read();
-  return 0;
+static int load_new_scripts(void) {
+  return upl_stdin_read();
 }
 
 int main() {
@@ -144,9 +143,8 @@ int main() {
 
   multicore_launch_core1(core1_entry);
 
-  sleep_ms(50);
-
   /* drain keypresses */
+  sleep_ms(50);
   while (multicore_fifo_rvalid()) multicore_fifo_pop_blocking();
 
   while(!multicore_fifo_rvalid()) {
@@ -192,8 +190,10 @@ int main() {
     js_promises();
 
     /* upload new scripts */
-    if (load_new_scripts())
-      game_init();
+    if (load_new_scripts()) {
+      /* jerry_cleanup(); game_init(); */
+      break;
+    }
 
     /* render */
     uint16_t screen[160 * 128] = {0};
@@ -201,5 +201,28 @@ int main() {
     render_errorbuf(screen);
     st7735_fill(screen);
   }
+
+  while (1) {
+    uint16_t screen[160 * 128] = {0};
+    strcpy(errorbuf, "                    \n"
+                     "                    \n"
+                     "                    \n"
+                     "                    \n"
+                     "                    \n"
+                     "                    \n"
+                     "                    \n"
+                     "    PLEASE REBOOT   \n"
+                     "     YOUR SPRIG     \n"
+                     "                    \n"
+                     "                    \n"
+                     "                    \n"
+                     "                    \n"
+                     "                    \n"
+                     " sprig.hackclub.dev \n");
+
+    render_errorbuf(screen);
+    st7735_fill(screen);
+  }
+
   return 0;
 }

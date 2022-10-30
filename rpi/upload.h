@@ -1,4 +1,5 @@
 #include "hardware/flash.h"
+static void core1_entry(void);
 
 /* rationale: half engine, half games? */
 /* NOTE: this has to be a multiple of 4096 (FLASH_SECTOR_SIZE) */
@@ -21,6 +22,7 @@ static const char *save_read(void) {
 
 
 typedef enum {
+  UplProg_StartSeq,
   UplProg_Header,
   UplProg_Body,
 } UplProg;
@@ -43,12 +45,28 @@ static void upl_flush_buf(void) {
          (upl_state.len/(FLASH_PAGE_SIZE + 1)));
 }
 
-static void upl_stdin_read(void) {
+static int upl_stdin_read(void) {
+  int timeout = 0;
   while (1) {
-    int c = getchar_timeout_us(0);
-    if (c == PICO_ERROR_TIMEOUT) return;
+    int c = getchar_timeout_us(timeout);
+    if (c == PICO_ERROR_TIMEOUT) return 0;
+
+    timeout = 100; /* we in upload mode now */
 
     switch (upl_state.prog) {
+      case UplProg_StartSeq: {
+        if (c == upl_state.len_i) {
+          upl_state.len_i++;
+
+          if (upl_state.len_i == 5) {
+            puts("found startup seq!");
+            memset(&upl_state, 0, sizeof(upl_state));
+            upl_state.prog = UplProg_Header;
+          }
+        } else {
+          upl_state.len_i = 0;
+        }
+      } break;
       case UplProg_Header: {
         ((char *)(&upl_state.len))[upl_state.len_i++] = c;
         if (upl_state.len_i >= sizeof(uint32_t)) {
@@ -61,16 +79,22 @@ static void upl_stdin_read(void) {
           /* one to round up, one for magic */
           int page_len   = (char_len/FLASH_PAGE_SIZE   + 2) * FLASH_PAGE_SIZE  ;
           int sector_len = (page_len/FLASH_SECTOR_SIZE + 1) * FLASH_SECTOR_SIZE;
+
+          /* irqs on other core? */
+          multicore_reset_core1();
           
           uint32_t interrupts = save_and_disable_interrupts();
           flash_range_erase(FLASH_TARGET_OFFSET, sector_len);
           restore_interrupts(interrupts);
+
+          puts("cleared flash");
         }
       } break;
       case UplProg_Body: {
         // printf("upl char (%d/%d)\n", upl_state.len_i, upl_state.len);
         upl_state.buf[upl_state.len_i++ % 256] = c;
         if (upl_state.len_i % 256 == 0) {
+          puts("flushin buf");
           upl_flush_buf();
         }
 
@@ -81,10 +105,16 @@ static void upl_stdin_read(void) {
           flash_range_program(FLASH_TARGET_OFFSET, (void *)SPRIG_MAGIC, FLASH_PAGE_SIZE);
           restore_interrupts(interrupts);
           
-          printf("read in %d chars\n", upl_state.len);
+          // printf("read in %d chars\n", upl_state.len);
+          puts("ALL_GOOD");
           memset(&upl_state, 0, sizeof(upl_state));
+
+          multicore_launch_core1(core1_entry);
+
+          return 1;
         }
       } break;
     }
   }
+  puts("end of upl_stdin_read");
 }
