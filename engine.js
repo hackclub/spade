@@ -954,4 +954,27 @@ onInput('w', () => {
 onInput('a', () => {
   if (grid.win === true) return;
   getFirst(m).x -= 1;
-  globalMouseX 
+  globalMouseX = getFirst(m).x;
+});
+
+onInput('s', () => {
+  if (grid.win === true) return;
+  getFirst(m).y += 1;
+  globalMouseY = getFirst(m).y;
+});
+
+onInput('d', () => {
+  if (grid.win === true) return;
+  getFirst(m).x += 1;
+  globalMouseX = getFirst(m).x;
+});
+
+onInput('l', () => {
+  if (grid.win === true) return;
+  const { x, y } = getFirst(m);
+  rotatePipe(y, x);
+});
+
+onInput('j', () => {
+  grid.init();
+});

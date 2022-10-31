@@ -572,11 +572,11 @@ JERRYXX_FUN(tilesWith) {
   int i = 0;
   while (map_tiles_with(&m, kinds)) {
     int nsprites = 0;
-    for (Sprite *s = m.sprite; s; s = s->next) nsprites++;
+    for (Sprite *s = m.sprite; s; s = get_sprite(s->next)) nsprites++;
     jerry_value_t tile = jerry_create_array(nsprites);
 
     int j = 0;
-    for (Sprite *s = m.sprite; s; s = s->next) {
+    for (Sprite *s = m.sprite; s; s = get_sprite(s->next)) {
       jerry_value_t sprite = sprite_to_jerry_object(s);
       jerry_release_value(jerry_set_property_by_index(tile, j++, sprite));
       jerry_release_value(sprite);
