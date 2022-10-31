@@ -1,0 +1,22 @@
+{
+  "version": 6,
+  "configurePresets": [
+    {
+      "name": "pc",
+      "displayName": "PC Build",
+      "binaryDir": "${sourceDir}/pc_build/"
+    },
+    {
+      "name": "rpi",
+      "displayName": "Pico Build",
+      "binaryDir": "${sourceDir}/rpi_build",
+      "cacheVariables": {
+        "SPADE_TARGET": "rpi"
+      },
+      "environment": {
+        "PICO_SDK_PATH": "~/raspberrypi/pico-sdk",
+        "PICO_EXTRAS_PATH": "~/raspberrypi/pico-extras"
+      }
+    }
+  ]
+}
