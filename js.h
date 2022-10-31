@@ -20,6 +20,7 @@ static void js_init_with(const jerry_char_t *script, jerry_length_t script_size)
       jerry_value_t console_obj = jerry_create_object ();
 
       jerryxx_set_property_function(console_obj, "log", console_log);
+      jerryxx_set_property_function(console_obj, "error", console_log);
 
       jerry_value_t prop_console = jerry_create_string ((const jerry_char_t *) "console");
       jerry_release_value(jerry_set_property(global_object, prop_console, console_obj));
