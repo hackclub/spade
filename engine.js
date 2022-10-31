@@ -118,7 +118,8 @@ native.press_cb(pin => {
   setTimeout  = (fn, ms) => (timers.push({ fn, ms, id }), id++);
   setInterval = (fn, ms) => (timers.push({ fn, ms, id, restartAt: ms }), id++);
   clearTimeout = clearInterval = id => {
-    timers.splice(timers.findIndex(t => t.id == id), 1);
+    const index = timers.findIndex(t => t.id == id);
+    if (index !== -1) timers.splice(index, 1);
   };
   native.frame_cb(dt => {
     const errors = [];
@@ -135,10 +136,12 @@ native.press_cb(pin => {
         }
 
         /* restart intervals, clear timeouts */
-        if (tim.restartAt !== undefined)
+        if (tim.restartAt !== undefined) {
           tim.ms = tim.restartAt;
-        else
-          timers.splice(timers.indexOf(tim), 1);
+        } else {
+          const index = timers.indexOf(tim)
+          if (index !== -1) timers.splice(index, 1);
+        }
       }
       tim.ms -= dt;
     }
@@ -951,27 +954,4 @@ onInput('w', () => {
 onInput('a', () => {
   if (grid.win === true) return;
   getFirst(m).x -= 1;
-  globalMouseX = getFirst(m).x;
-});
-
-onInput('s', () => {
-  if (grid.win === true) return;
-  getFirst(m).y += 1;
-  globalMouseY = getFirst(m).y;
-});
-
-onInput('d', () => {
-  if (grid.win === true) return;
-  getFirst(m).x += 1;
-  globalMouseX = getFirst(m).x;
-});
-
-onInput('l', () => {
-  if (grid.win === true) return;
-  const { x, y } = getFirst(m);
-  rotatePipe(y, x);
-});
-
-onInput('j', () => {
-  grid.init();
-});
+  globalMouseX 
