@@ -35,18 +35,28 @@ static void module_native_init(jerry_value_t exports);
 #include "js.h"
 #include "module_native.c"
 
+#define HISTORY_LEN (64)
 typedef struct {
-  absolute_time_t last_up, last_down;
-  uint8_t last_state, edge;
+  uint8_t history[HISTORY_LEN/8];
+  uint8_t last_state, ring_i;
 } ButtonState;
 uint button_pins[] = {  5,  7,  6,  8, 12, 14, 13, 15 };
 static ButtonState button_states[ARR_LEN(button_pins)] = {0};
 
+static uint8_t button_history_read(ButtonState *bs, int i) {
+  int q = 1 << (i % 8);
+  return !!(bs->history[i/8] & q);
+}
+static void button_history_write(ButtonState *bs, int i, uint8_t v) {
+  if (v)
+    bs->history[i/8] |=   1 << (i % 8) ;
+  else
+    bs->history[i/8] &= ~(1 << (i % 8));
+}
+
 static void button_init(void) {
   for (int i = 0; i < ARR_LEN(button_pins); i++) {
     ButtonState *bs = button_states + i;
-    bs->edge = 1;
-    bs->last_up = bs->last_down = get_absolute_time();
 
     gpio_set_dir(button_pins[i], GPIO_IN);
     gpio_pull_up(button_pins[i]);
@@ -60,32 +70,22 @@ static void button_poll(void) {
   for (int i = 0; i < ARR_LEN(button_pins); i++) {
     ButtonState *bs = button_states + i;
 
-    uint8_t state = gpio_get(button_pins[i]);
-    if (state != bs->last_state) {
-      bs->last_state = state;
+    bs->ring_i = (bs->ring_i + 1) % HISTORY_LEN;
+    button_history_write(bs, bs->ring_i, gpio_get(button_pins[i]));
 
-      if (state) bs->last_up   = get_absolute_time();
-      else       bs->last_down = get_absolute_time();
-    }
+    /* down is true if more than half are true */
+    int down = 0;
+    for (int i = 0; i < HISTORY_LEN; i++)
+      down += button_history_read(bs, i);
+    down = down > ((HISTORY_LEN*5)/6);
 
-    absolute_time_t when_up_cooldown = delayed_by_ms(bs->last_up  , 70);
-    absolute_time_t light_when_start = delayed_by_ms(bs->last_down, 20);
-    absolute_time_t light_when_stop  = delayed_by_ms(bs->last_down, 40);
-
-    uint8_t on = absolute_time_diff_us(get_absolute_time(), light_when_start) < 0 &&
-                 absolute_time_diff_us(get_absolute_time(), light_when_stop ) > 0 &&
-                 absolute_time_diff_us(get_absolute_time(), when_up_cooldown) < 0  ;
-
-    // if (on) dbg("BRUH");
-
-    if (!on && !bs->edge) bs->edge = 1;
-    if (on && bs->edge) {
-      bs->edge = 0;
+    if (down != bs->last_state) {
+      bs->last_state = down;
 
       // spade_call_press(button_pins[i]);
 
       // queue_add_blocking(&button_queue, &(ButtonPress) { .pin = button_pins[i] });
-      multicore_fifo_push_blocking(button_pins[i]);
+      if (!down) multicore_fifo_push_blocking(button_pins[i]);
 
       //      if (button_pins[i] == 8) map_move(map_get_first('p'),  1,  0);
       // else if (button_pins[i] == 6) map_move(map_get_first('p'), -1,  0);
