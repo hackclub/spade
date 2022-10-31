@@ -111,7 +111,8 @@ const button = {
 };
 
 native.press_cb(pin => {
-  button.pinToHandlers[pin].forEach(f => f());
+  if (button.pinToHandlers[pin])
+    button.pinToHandlers[pin].forEach(f => f());
 
   afterInputs.forEach(f => f());
 
