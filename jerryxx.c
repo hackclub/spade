@@ -20,7 +20,9 @@
  */
 
 #include "jerryxx.h"
+#include "script.h"
 
+#include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -166,6 +168,45 @@ void jerryxx_strlcat_value(char *dest, jerry_value_t src, size_t size) {
   jerry_release_value(str);
 }
 
+static void strlcat_fixed_error(char *dest, jerry_value_t loc, size_t size) {
+  jerry_value_t str = jerry_value_to_string(loc);
+  jerry_size_t str_sz = jerry_get_string_size(str);
+  jerry_char_t str_buf[str_sz + 1];
+  memset(str_buf, 0, str_sz + 1);
+  jerry_string_to_char_buffer(str, str_buf, str_sz);
+
+  int line_start = 0;
+  int line = 0;
+  for (int i = 0; i < str_sz + 1; i++) {
+    if (str_buf[i] == ':' && !line_start) {
+      line_start = i + 1;
+    } else if (line_start && (str_buf[i] == '\0' || str_buf[i] == ':')) {
+      // Backtrack and parse the line number
+      for (int j = 0; j < i - line_start; j++) {
+        line += (str_buf[i - j - 1] - '0') * pow(10, j);
+      }
+      break;
+    }
+  }
+
+  int engine_lines = 1;
+  for (int i = 0; i < sizeof(engine_script); i++) {
+    if (engine_script[i] == '\n') engine_lines++;
+  }
+
+  if (line <= engine_lines) {
+    strlcat(dest, "engine:", size);
+  } else {
+    strlcat(dest, "game:", size);
+    line = line - engine_lines + 1;
+  }
+  char line_str[7] = "";
+  sprintf(line_str, "%d", line);
+  strlcat(dest, line_str, size);
+
+  jerry_release_value(str);
+}
+
 /**
  * Print error with stacktrace
  */
@@ -195,7 +236,7 @@ void jerryxx_print_error(jerry_value_t value, bool print_stacktrace) {
         jerry_value_t item_val = jerry_get_property_by_index(backtrace_val, i);
         if (!jerry_value_is_error(item_val) && jerry_value_is_string(item_val)) {
           strlcat(errorbuf, "  at ", sizeof(errorbuf));
-          jerryxx_strlcat_value(errorbuf, item_val, sizeof(errorbuf));
+          strlcat_fixed_error(errorbuf, item_val, sizeof(errorbuf));
           strlcat(errorbuf, "\n", sizeof(errorbuf));
         }
         jerry_release_value(item_val);
