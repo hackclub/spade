@@ -54,4 +54,8 @@
 #define MSTR_NATIVE_press_cb "press_cb"
 #define MSTR_NATIVE_frame_cb "frame_cb"
 
+#define MSTR_NATIVE_piano_queue_song "piano_queue_song"
+#define MSTR_NATIVE_piano_unqueue_song "piano_unqueue_song"
+#define MSTR_NATIVE_piano_is_song_queued "piano_is_song_queued"
+
 #endif /* __NATIVE_MAGIC_STRINGS_H */

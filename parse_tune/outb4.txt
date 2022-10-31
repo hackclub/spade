@@ -1,0 +1,333 @@
+--- EXAMPLE 0 ---
+67 chars left
+pause { duration: 166.666672ms }
+47 chars left
+28 chars left
+sound { freq: 440, shape: 1, duration: 166.666672 }
+6 chars left
+pause { duration: 166.666672ms }
+4 chars left
+--- EXAMPLE 1 ---
+1951 chars left
+1934 chars left
+sound { freq: 294, shape: 1, duration: 379.746826 }
+1914 chars left
+sound { freq: 523, shape: 0, duration: 379.746826 }
+1892 chars left
+pause { duration: 379.746826ms }
+1890 chars left
+1873 chars left
+sound { freq: 494, shape: 0, duration: 379.746826 }
+1853 chars left
+sound { freq: 330, shape: 1, duration: 379.746826 }
+1831 chars left
+sound { freq: 784, shape: 2, duration: 379.746826 }
+1809 chars left
+pause { duration: 379.746826ms }
+1807 chars left
+1790 chars left
+sound { freq: 523, shape: 0, duration: 379.746826 }
+1770 chars left
+pause { duration: 379.746826ms }
+1768 chars left
+1751 chars left
+sound { freq: 587, shape: 0, duration: 379.746826 }
+1731 chars left
+sound { freq: 349, shape: 1, duration: 379.746826 }
+1709 chars left
+sound { freq: 988, shape: 2, duration: 379.746826 }
+1687 chars left
+pause { duration: 379.746826ms }
+1685 chars left
+1668 chars left
+sound { freq: 659, shape: 0, duration: 379.746826 }
+1648 chars left
+sound { freq: 784, shape: 2, duration: 379.746826 }
+1626 chars left
+pause { duration: 379.746826ms }
+1624 chars left
+1607 chars left
+sound { freq: 330, shape: 1, duration: 379.746826 }
+1587 chars left
+sound { freq: 880, shape: 2, duration: 379.746826 }
+1565 chars left
+pause { duration: 379.746826ms }
+1563 chars left
+1546 chars left
+sound { freq: 587, shape: 0, duration: 379.746826 }
+1526 chars left
+pause { duration: 379.746826ms }
+1524 chars left
+1507 chars left
+sound { freq: 523, shape: 0, duration: 379.746826 }
+1487 chars left
+sound { freq: 294, shape: 1, duration: 379.746826 }
+1465 chars left
+sound { freq: 784, shape: 2, duration: 379.746826 }
+1443 chars left
+pause { duration: 379.746826ms }
+1441 chars left
+1424 chars left
+sound { freq: 494, shape: 0, duration: 379.746826 }
+1404 chars left
+pause { duration: 379.746826ms }
+1402 chars left
+1385 chars left
+sound { freq: 988, shape: 2, duration: 379.746826 }
+1365 chars left
+pause { duration: 379.746826ms }
+1363 chars left
+1346 chars left
+sound { freq: 784, shape: 2, duration: 379.746826 }
+1326 chars left
+pause { duration: 379.746826ms }
+1324 chars left
+1307 chars left
+sound { freq: 494, shape: 0, duration: 379.746826 }
+1287 chars left
+sound { freq: 349, shape: 1, duration: 379.746826 }
+1265 chars left
+sound { freq: 880, shape: 2, duration: 379.746826 }
+1243 chars left
+pause { duration: 379.746826ms }
+1241 chars left
+1224 chars left
+sound { freq: 523, shape: 0, duration: 379.746826 }
+1204 chars left
+pause { duration: 379.746826ms }
+1202 chars left
+1185 chars left
+sound { freq: 587, shape: 0, duration: 379.746826 }
+1165 chars left
+sound { freq: 330, shape: 1, duration: 379.746826 }
+1143 chars left
+pause { duration: 379.746826ms }
+1141 chars left
+1124 chars left
+sound { freq: 784, shape: 2, duration: 379.746826 }
+1104 chars left
+pause { duration: 379.746826ms }
+1102 chars left
+1085 chars left
+sound { freq: 494, shape: 0, duration: 379.746826 }
+1065 chars left
+sound { freq: 294, shape: 1, duration: 379.746826 }
+1043 chars left
+sound { freq: 988, shape: 2, duration: 379.746826 }
+1021 chars left
+pause { duration: 379.746826ms }
+1019 chars left
+1002 chars left
+sound { freq: 440, shape: 0, duration: 379.746826 }
+982 chars left
+sound { freq: 784, shape: 2, duration: 379.746826 }
+960 chars left
+pause { duration: 379.746826ms }
+958 chars left
+941 chars left
+sound { freq: 392, shape: 0, duration: 379.746826 }
+921 chars left
+sound { freq: 262, shape: 1, duration: 379.746826 }
+899 chars left
+sound { freq: 880, shape: 2, duration: 379.746826 }
+877 chars left
+pause { duration: 379.746826ms }
+875 chars left
+858 chars left
+sound { freq: 784, shape: 2, duration: 379.746826 }
+838 chars left
+sound { freq: 440, shape: 0, duration: 379.746826 }
+816 chars left
+sound { freq: 294, shape: 1, duration: 379.746826 }
+794 chars left
+pause { duration: 379.746826ms }
+792 chars left
+775 chars left
+sound { freq: 392, shape: 0, duration: 379.746826 }
+755 chars left
+pause { duration: 379.746826ms }
+753 chars left
+736 chars left
+sound { freq: 784, shape: 2, duration: 379.746826 }
+716 chars left
+sound { freq: 330, shape: 1, duration: 379.746826 }
+694 chars left
+pause { duration: 379.746826ms }
+692 chars left
+675 chars left
+sound { freq: 440, shape: 0, duration: 379.746826 }
+655 chars left
+pause { duration: 379.746826ms }
+653 chars left
+636 chars left
+sound { freq: 988, shape: 2, duration: 379.746826 }
+616 chars left
+sound { freq: 349, shape: 1, duration: 379.746826 }
+594 chars left
+sound { freq: 494, shape: 0, duration: 379.746826 }
+572 chars left
+pause { duration: 379.746826ms }
+570 chars left
+553 chars left
+sound { freq: 784, shape: 2, duration: 379.746826 }
+533 chars left
+sound { freq: 523, shape: 0, duration: 379.746826 }
+511 chars left
+pause { duration: 379.746826ms }
+509 chars left
+492 chars left
+sound { freq: 880, shape: 2, duration: 379.746826 }
+472 chars left
+sound { freq: 330, shape: 1, duration: 379.746826 }
+450 chars left
+sound { freq: 587, shape: 0, duration: 379.746826 }
+428 chars left
+pause { duration: 379.746826ms }
+426 chars left
+pause { duration: 379.746826ms }
+408 chars left
+391 chars left
+sound { freq: 294, shape: 1, duration: 379.746826 }
+371 chars left
+sound { freq: 523, shape: 0, duration: 379.746826 }
+349 chars left
+pause { duration: 379.746826ms }
+347 chars left
+330 chars left
+sound { freq: 784, shape: 2, duration: 379.746826 }
+310 chars left
+sound { freq: 494, shape: 0, duration: 379.746826 }
+288 chars left
+pause { duration: 379.746826ms }
+286 chars left
+269 chars left
+sound { freq: 262, shape: 1, duration: 379.746826 }
+249 chars left
+sound { freq: 440, shape: 0, duration: 379.746826 }
+227 chars left
+pause { duration: 379.746826ms }
+225 chars left
+208 chars left
+sound { freq: 988, shape: 2, duration: 379.746826 }
+188 chars left
+sound { freq: 294, shape: 1, duration: 379.746826 }
+166 chars left
+pause { duration: 379.746826ms }
+164 chars left
+147 chars left
+sound { freq: 784, shape: 2, duration: 379.746826 }
+127 chars left
+sound { freq: 330, shape: 1, duration: 379.746826 }
+105 chars left
+sound { freq: 440, shape: 0, duration: 379.746826 }
+83 chars left
+pause { duration: 379.746826ms }
+81 chars left
+64 chars left
+sound { freq: 880, shape: 2, duration: 379.746826 }
+44 chars left
+sound { freq: 349, shape: 1, duration: 379.746826 }
+22 chars left
+sound { freq: 494, shape: 0, duration: 379.746826 }
+0 chars left
+--- EXAMPLE 2 ---
+123 chars left
+pause { duration: 166.666672ms }
+103 chars left
+84 chars left
+sound { freq: 523, shape: 3, duration: 166.666672 }
+62 chars left
+pause { duration: 166.666672ms }
+60 chars left
+41 chars left
+sound { freq: 494, shape: 3, duration: 166.666672 }
+19 chars left
+pause { duration: 166.666672ms }
+17 chars left
+--- EXAMPLE 3 ---
+49 chars left
+pause { duration: 500.000000ms }
+44 chars left
+40 chars left
+sound { freq: 523, shape: 0, duration: 500.000000 }
+33 chars left
+pause { duration: 500.000000ms }
+31 chars left
+27 chars left
+sound { freq: 587, shape: 0, duration: 500.000000 }
+20 chars left
+pause { duration: 500.000000ms }
+18 chars left
+14 chars left
+sound { freq: 659, shape: 0, duration: 500.000000 }
+7 chars left
+pause { duration: 500.000000ms }
+5 chars left
+--- EXAMPLE 4 ---
+560 chars left
+pause { duration: 166.666672ms }
+540 chars left
+521 chars left
+sound { freq: 523, shape: 0, duration: 166.666672 }
+499 chars left
+pause { duration: 166.666672ms }
+497 chars left
+478 chars left
+sound { freq: 587, shape: 0, duration: 166.666672 }
+456 chars left
+pause { duration: 166.666672ms }
+454 chars left
+435 chars left
+sound { freq: 659, shape: 0, duration: 166.666672 }
+413 chars left
+pause { duration: 166.666672ms }
+411 chars left
+392 chars left
+sound { freq: 494, shape: 0, duration: 166.666672 }
+370 chars left
+pause { duration: 166.666672ms }
+368 chars left
+349 chars left
+sound { freq: 523, shape: 0, duration: 166.666672 }
+327 chars left
+pause { duration: 166.666672ms }
+325 chars left
+306 chars left
+sound { freq: 587, shape: 0, duration: 166.666672 }
+284 chars left
+pause { duration: 166.666672ms }
+282 chars left
+263 chars left
+sound { freq: 659, shape: 0, duration: 166.666672 }
+241 chars left
+pause { duration: 166.666672ms }
+239 chars left
+220 chars left
+sound { freq: 587, shape: 0, duration: 166.666672 }
+198 chars left
+pause { duration: 166.666672ms }
+196 chars left
+177 chars left
+sound { freq: 523, shape: 0, duration: 166.666672 }
+155 chars left
+pause { duration: 166.666672ms }
+153 chars left
+pause { duration: 166.666672ms }
+133 chars left
+114 chars left
+sound { freq: 494, shape: 0, duration: 166.666672 }
+92 chars left
+pause { duration: 166.666672ms }
+90 chars left
+71 chars left
+sound { freq: 659, shape: 0, duration: 166.666672 }
+49 chars left
+pause { duration: 166.666672ms }
+47 chars left
+28 chars left
+sound { freq: 523, shape: 0, duration: 166.666672 }
+6 chars left
+pause { duration: 166.666672ms }
+4 chars left
+--- EXAMPLE 5 ---
+19 chars left

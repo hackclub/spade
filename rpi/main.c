@@ -7,6 +7,7 @@
 #include "pico/util/queue.h"
 #include "pico/multicore.h"
 
+#include "piano.h"
 #include "ST7735_TFT.h"
 #include "upload.h"
 
@@ -113,6 +114,20 @@ static int load_new_scripts(void) {
   return upl_stdin_read();
 }
 
+void piano_jerry_song_free(void *p) {
+  /* it's straight up a jerry_value_t, not even a pointer to one */
+  jerry_value_t jvt = (jerry_value_t)p;
+
+  jerry_release_value(jvt);
+}
+int piano_jerry_song_chars(void *p, char *buf, int buf_len) {
+  /* it's straight up a jerry_value_t, not even a pointer to one */
+  jerry_value_t jvt = (jerry_value_t)p;
+
+  int read = jerry_string_to_char_buffer(jvt, (jerry_char_t *)buf, (jerry_size_t) buf_len);
+  return read;
+}
+
 int main() {
   stdio_init_all();
 
@@ -144,6 +159,9 @@ int main() {
   multicore_launch_core1(core1_entry);
 
   /* drain keypresses */
+  /* what really needs to be done here is to have button_init
+   * record when it starts so that we can use that timestamp to
+   * ignore these fake startup keypresses */
   sleep_ms(50);
   while (multicore_fifo_rvalid()) multicore_fifo_pop_blocking();
 
@@ -175,6 +193,10 @@ int main() {
   while (multicore_fifo_rvalid()) multicore_fifo_pop_blocking();
 
   game_init();
+  piano_init((PianoOpts) {
+    .song_free = piano_jerry_song_free,
+    .song_chars = piano_jerry_song_chars,
+  });
 
   absolute_time_t last = get_absolute_time();
   while(1) {
@@ -188,6 +210,8 @@ int main() {
     last = now;
     spade_call_frame(elapsed);
     js_promises();
+
+    piano_try_push_samples();
 
     /* upload new scripts */
     if (load_new_scripts()) {
