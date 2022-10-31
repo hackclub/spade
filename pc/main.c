@@ -14,6 +14,7 @@
 
 static void oom(void) { yell("oom!"); abort(); }
 char errorbuf[512] = "";
+bool fatal_error = false;
 #include "base_engine.c"
 
 #include "jerryscript.h"
@@ -101,6 +102,17 @@ int main() {
   struct mfb_timer *lastframe = mfb_timer_create();
   mfb_timer_now(lastframe);
   do {
+    if (fatal_error) {
+      memset(screen, 0, sizeof(screen));
+      render_errorbuf(screen);
+      uint8_t ok = STATE_OK == mfb_update_ex(window, screen, SPADE_WIN_SIZE_X, SPADE_WIN_SIZE_Y);
+      if (!ok) {
+        window = 0x0;
+        break;
+      }
+      continue;
+    }
+
     js_promises();
     spade_call_frame(1000.0f * mfb_timer_delta(lastframe));
 
