@@ -90,6 +90,16 @@ void render_stats(Color *screen) {
   }
 }
 
+static void js_init(void) {
+  const jerry_char_t script[] = 
+#include "engine.js.cstring"
+#include "game.js.cstring"
+  ;
+
+  const jerry_length_t script_size = sizeof (script) - 1;
+  js_init_with(script, script_size);
+}
+
 int main() {
   struct mfb_window *window = mfb_open_ex("spade", SPADE_WIN_SIZE_X * 2, SPADE_WIN_SIZE_Y * 2, 0);
   if (!window) return 1;

@@ -75,7 +75,12 @@ static int upl_stdin_read(void) {
           upl_state.len_i = 0;
           upl_state.page = 1; /* skip first, that's for magic */
 
-          int char_len = upl_state.len;
+          static char script[] = 
+            #include "engine.js.cstring"
+          ;
+
+          int char_len = upl_state.len + sizeof (script); /* sizeof script includes the null term, we still need to remove from script */
+          upl_state.len = char_len;
           /* one to round up, one for magic */
           int page_len   = (char_len/FLASH_PAGE_SIZE   + 2) * FLASH_PAGE_SIZE  ;
           int sector_len = (page_len/FLASH_SECTOR_SIZE + 1) * FLASH_SECTOR_SIZE;
@@ -87,18 +92,26 @@ static int upl_stdin_read(void) {
           flash_range_erase(FLASH_TARGET_OFFSET, sector_len);
           restore_interrupts(interrupts);
 
+          for (int i = 0; i < sizeof(script) - 1; i++) {
+            upl_state.buf[upl_state.len_i++ % FLASH_PAGE_SIZE] = script[i];
+            if (upl_state.len_i % FLASH_PAGE_SIZE == 0) {
+              puts("flushin buf (wit da code!)");
+              upl_flush_buf();
+            }
+          }
+
           puts("cleared flash");
         }
       } break;
       case UplProg_Body: {
         // printf("upl char (%d/%d)\n", upl_state.len_i, upl_state.len);
-        upl_state.buf[upl_state.len_i++ % 256] = c;
-        if (upl_state.len_i % 256 == 0) {
+        upl_state.buf[upl_state.len_i++ % FLASH_PAGE_SIZE] = c;
+        if (upl_state.len_i % FLASH_PAGE_SIZE == 0) {
           puts("flushin buf");
           upl_flush_buf();
         }
 
-        if (upl_state.len_i == upl_state.len) {
+        if (upl_state.len_i == upl_state.len - 1) {
           upl_flush_buf();
 
           uint32_t interrupts = save_and_disable_interrupts();

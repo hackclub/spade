@@ -4,3 +4,6 @@ rpi_build/
 .DS_Store
 pc/jerry/include
 pc/jerry/lib
+engine.js.cstring
+game.js
+game.js.cstring
