@@ -86,6 +86,24 @@ JERRYXX_FUN(native_frame_cb_fn) {
   return jerry_create_undefined(); 
 }
 
+JERRYXX_FUN(native_piano_queue_song_fn) {
+  jerry_value_t song_str = jerry_acquire_value(JERRYXX_GET_ARG(0));
+  piano_queue_song(
+    (void *)song_str,
+    JERRYXX_GET_ARG_NUMBER(1)
+  );
+  return jerry_create_undefined();
+}
+
+JERRYXX_FUN(native_piano_unqueue_song_fn) {
+  piano_unqueue_song((void *)JERRYXX_GET_ARG(0));
+  return jerry_create_undefined();
+}
+
+JERRYXX_FUN(native_piano_is_song_queued_fn) {
+  return jerry_create_boolean(piano_is_song_queued((void *)JERRYXX_GET_ARG(0)));
+}
+
 JERRYXX_FUN(native_legend_clear_fn) { 
   dbg("module_native::native_legend_clear_fn");
   legend_clear(); return jerry_create_undefined(); }
@@ -655,6 +673,10 @@ static void module_native_init(jerry_value_t exports) {
 
   jerryxx_set_property_function(exports, MSTR_NATIVE_press_cb, native_press_cb_fn);
   jerryxx_set_property_function(exports, MSTR_NATIVE_frame_cb, native_frame_cb_fn);
+
+  jerryxx_set_property_function(exports, MSTR_NATIVE_piano_queue_song, native_piano_queue_song_fn);
+  jerryxx_set_property_function(exports, MSTR_NATIVE_piano_unqueue_song, native_piano_unqueue_song_fn);
+  jerryxx_set_property_function(exports, MSTR_NATIVE_piano_is_song_queued, native_piano_is_song_queued_fn);
 }
 
 // moved JS wrapper into engine.js
