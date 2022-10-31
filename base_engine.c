@@ -1,4 +1,5 @@
 #include <stdint.h>
+#include "errorbuf.h"
 #include "font.h"
 
 #ifdef __wasm__
@@ -79,8 +80,6 @@ typedef struct { Sprite *sprite; int x, y; uint8_t dirty; } MapIter;
 #define PER_DOODLE (100)
 #define SPRITE_COUNT (512)
 
-#define MAP_SIZE_X (20)
-#define MAP_SIZE_Y (20)
 #define SCREEN_SIZE_X (160)
 #define SCREEN_SIZE_Y (128)
 
@@ -114,9 +113,8 @@ typedef struct {
   uint8_t  sprite_slot_active[SPRITE_COUNT];
   uint32_t sprite_slot_generation[SPRITE_COUNT];
   Sprite sprite_pool[SPRITE_COUNT];
-  size_t sprite_pool_head;
   /* points into sprite_pool */
-  Sprite *map[MAP_SIZE_X][MAP_SIZE_Y];
+  Sprite **map;
 
   int tile_size; /* how small tiles have to be to fit map on screen */
   char background_sprite;
@@ -442,11 +440,11 @@ WASM_EXPORT uint32_t sprite_generation(Sprite *s) {
 /* removes the canonical reference to this sprite from the spatial grid.
    it is your responsibility to subsequently free the sprite. */
 static void map_pluck(Sprite *s) {
-  Sprite *top = state->map[s->x][s->y];
+  Sprite *top = state->map[s->x + s->y * state->width];
   // assert(top != 0);
 
   if (top == s) {
-    state->map[s->x][s->y] = s->next;
+    state->map[s->x + s->y * state->width] = s->next;
     return;
   }
 
@@ -457,7 +455,7 @@ static void map_pluck(Sprite *s) {
     }
   }
 
-  state->map[s->x][s->y] = 0;
+  state->map[s->x + s->y * state->width] = 0;
 }
 
 /* inserts pointer to sprite into the spritestack at this x and y,
@@ -466,14 +464,14 @@ static void map_pluck(Sprite *s) {
  * 
  * see map_plop about caller's responsibility */
 static void map_plop(Sprite *sprite) {
-  Sprite *top = state->map[sprite->x][sprite->y];
+  Sprite *top = state->map[sprite->x + sprite->y * state->width];
 
   /* we want the sprite with the lowest z-order on the top. */
 
   #define Z_ORDER(sprite) (state->char_to_index[(int)(sprite)->kind])
   if (top == 0 || Z_ORDER(top) >= Z_ORDER(sprite)) {
-    sprite->next = state->map[sprite->x][sprite->y];
-    state->map[sprite->x][sprite->y] = sprite;
+    sprite->next = state->map[sprite->x + sprite->y * state->width];
+    state->map[sprite->x + sprite->y * state->width] = sprite;
     // dbg("top's me, early ret");
     return;
   }
@@ -503,12 +501,32 @@ WASM_EXPORT Sprite *map_add(int x, int y, char kind) {
 }
 
 WASM_EXPORT void map_set(char *str) {
-  __builtin_memset(&state->map, 0, sizeof(state->map));
-
+  if (state->map != NULL) free(state->map);
   for (int i = 0; i < SPRITE_COUNT; i++)
     map_free(state->sprite_pool + i);
 
   int tx = 0, ty = 0;
+  char *str_dup = str;
+  do {
+    switch (*str_dup) {
+      case  ' ': continue;
+      case '\0':               break;
+      case '\n': ty++, tx = 0; break;
+      default: tx++;           break;
+    }
+  } while (*str_dup++);
+  state->width = tx;
+  state->height = ty+1;
+
+  state->map = calloc(state->width * state->height, sizeof(Sprite*));
+  if (state->map == NULL) {
+    yell("AAAAAAAAA (map too big)");
+    fatal_error = true;
+    snprintf(errorbuf, sizeof(errorbuf), "map too big to fit in memory (%dx%d)", state->width, state->height);
+    return;
+  }
+
+  tx = 0, ty = 0;
   do {
     switch (*str) {
       case  ' ': continue;
@@ -516,14 +534,12 @@ WASM_EXPORT void map_set(char *str) {
       case  '.': tx++;         break;
       case '\0':               break;
       default: {
-        state->map[tx][ty] = map_alloc();
-        *state->map[tx][ty] = (Sprite) { .x = tx, .y = ty, .kind = *str };
+        state->map[tx + ty * state->width] = map_alloc();
+        *state->map[tx + ty * state->width] = (Sprite) { .x = tx, .y = ty, .kind = *str };
         tx++;
       } break;
     }
   } while (*str++);
-  state->width = tx;
-  state->height = ty+1;
 
   render_resize_legend();
 }
@@ -534,7 +550,7 @@ WASM_EXPORT int map_height(void) { return state->height; }
 WASM_EXPORT Sprite *map_get_first(char kind) {
   for (int y = 0; y < state->height; y++)
     for (int x = 0; x < state->width; x++) {
-      Sprite *top = state->map[x][y];
+      Sprite *top = state->map[x + y * state->width];
 
       for (; top; top = top->next)
         if (top->kind == kind)
@@ -561,8 +577,8 @@ WASM_EXPORT uint8_t map_get_grid(MapIter *m) {
       }
     }
 
-    if (state->map[m->x][m->y]) {
-      m->sprite = state->map[m->x][m->y];
+    if (state->map[m->x + m->y * state->width]) {
+      m->sprite = state->map[m->x + m->y * state->width];
       return 1;
     }
   }
@@ -603,14 +619,14 @@ WASM_EXPORT uint8_t map_tiles_with(MapIter *m, char *kinds) {
       }
     }
 
-    if (state->map[m->x][m->y]) {
+    if (state->map[m->x + m->y * state->width]) {
       int kinds_found = 0;
 
-      for (Sprite *s = state->map[m->x][m->y]; s; s = s->next)
+      for (Sprite *s = state->map[m->x + m->y * state->width]; s; s = s->next)
         kinds_found += kinds_needed[(int)s->kind];
 
       if (kinds_found == kinds_len) {
-        m->sprite = state->map[m->x][m->y];
+        m->sprite = state->map[m->x + m->y * state->width];
         return 1;
       }
     }
@@ -624,11 +640,11 @@ WASM_EXPORT void map_remove(Sprite *s) {
 
 /* removes all of the sprites at a given location */
 WASM_EXPORT void map_drill(int x, int y) {
-  Sprite *top = state->map[x][y];
+  Sprite *top = state->map[x + y * state->width];
   for (; top; top = top->next) {
     map_free(top);
   }
-  state->map[x][y] = 0;
+  state->map[x + y * state->width] = 0;
 }
 
 
@@ -656,7 +672,7 @@ static int _map_move(Sprite *s, int big_dx, int big_dy) {
 
     if (state->solid[(int)s->kind]) {
       /* no moving into a solid! */
-      Sprite *n = state->map[x][y];
+      Sprite *n = state->map[x + y * state->width];
 
       for (; n; n = n->next)
         if (state->solid[(int)n->kind]) {
@@ -706,7 +722,7 @@ WASM_EXPORT MapIter *temp_MapIter_mem(void) {
 WASM_EXPORT void map_clear_deltas(void) {
   for (int y = 0; y < state->height; y++)
     for (int x = 0; x < state->width; x++) {
-      Sprite *top = state->map[x][y];
+      Sprite *top = state->map[x + y * state->width];
 
       for (; top; top = top->next)
         top->dx = top->dy = 0;

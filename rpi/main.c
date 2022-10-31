@@ -24,6 +24,7 @@
 
 static void oom(void) { puts("oom!"); }
 char errorbuf[512] = "";
+bool fatal_error = false;
 #include "base_engine.c"
 
 #include "jerryscript.h"
@@ -200,6 +201,13 @@ int main() {
 
   absolute_time_t last = get_absolute_time();
   while(1) {
+    if (fatal_error) {
+      uint16_t screen[160 * 128] = {0};
+      render_errorbuf(screen);
+      st7735_fill(screen);
+      continue;
+    }
+
     /* input handling */
     while (multicore_fifo_rvalid())
       spade_call_press(multicore_fifo_pop_blocking());
