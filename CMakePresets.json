@@ -4,11 +4,13 @@
     {
       "name": "pc",
       "displayName": "PC Build",
+      "generator": "Unix Makefiles",
       "binaryDir": "${sourceDir}/pc_build/"
     },
     {
       "name": "rpi",
       "displayName": "Pico Build",
+      "generator": "Unix Makefiles",
       "binaryDir": "${sourceDir}/rpi_build",
       "cacheVariables": {
         "SPADE_TARGET": "rpi"

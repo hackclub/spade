@@ -14,6 +14,7 @@
 #include "pico/stdlib.h"
 #include "hardware/spi.h"
 #include "hardware/timer.h"
+#include "hardware/watchdog.h"
 #include "pico/util/queue.h"
 #include "pico/multicore.h"
 #include "jerry_mem.h"
@@ -245,27 +246,25 @@ int main() {
     st7735_fill(screen);
   }
 
-  while (1) {
-    uint16_t screen[160 * 128] = {0};
-    strcpy(errorbuf, "                    \n"
-                     "                    \n"
-                     "                    \n"
-                     "                    \n"
-                     "                    \n"
-                     "                    \n"
-                     "                    \n"
-                     "    PLEASE REBOOT   \n"
-                     "     YOUR SPRIG     \n"
-                     "                    \n"
-                     "                    \n"
-                     "                    \n"
-                     "                    \n"
-                     "                    \n"
-                     " sprig.hackclub.dev \n");
+  uint16_t screen[160 * 128] = {0};
+  strcpy(errorbuf, "                    \n"
+                    "                    \n"
+                    "                    \n"
+                    "                    \n"
+                    "                    \n"
+                    "                    \n"
+                    "                    \n"
+                    "    PLEASE REBOOT   \n"
+                    "     YOUR SPRIG     \n"
+                    "                    \n"
+                    "                    \n"
+                    "                    \n"
+                    "                    \n"
+                    "                    \n"
+                    " sprig.hackclub.dev \n");
 
-    render_errorbuf(screen);
-    st7735_fill(screen);
-  }
-
-  return 0;
+  render_errorbuf(screen);
+  st7735_fill(screen);
+  watchdog_enable(0, false);
+  while (1) {}
 }
