@@ -6,10 +6,7 @@ static struct {
   jerry_value_t press_cb, frame_cb;
 } spade_state = {0};
 
-static void js_init_with(const jerry_char_t *script, jerry_length_t script_size) {
-
-  /* Initialize engine */
-  jerry_init (JERRY_INIT_MEM_STATS);
+static void js_run(const jerry_char_t *script, jerry_length_t script_size) {
 
   /* add shit to global scpoe */
   {
@@ -47,6 +44,11 @@ static void js_init_with(const jerry_char_t *script, jerry_length_t script_size)
     jerry_release_value(global_object);
   }
 
+  State_Render *sr = state->render;
+  dbgf("state->push_table     = %lu\n", state->push_table  );
+  dbgf("   sr->legend         = %lu\n", sr->legend         );
+  dbgf("   sr->legend_resized = %lu\n", sr->legend_resized );
+
   jerry_value_t parsed_code = jerry_parse (
     (jerry_char_t *)"src", sizeof("src")-1,
     script, script_size,
@@ -59,6 +61,7 @@ static void js_init_with(const jerry_char_t *script, jerry_length_t script_size)
     // abort();
   }
 
+  puts("bouta run some code");
   /* Execute the parsed source code in the Global scope */
   jerry_value_t ret_value = jerry_run (parsed_code);
 
@@ -146,8 +149,4 @@ static void spade_call_frame(double dt) {
 
   jerry_release_value(args[0]);
   jerry_release_value(this_value);
-}
-
-static void js_cleanup() {
-  jerry_cleanup();
 }

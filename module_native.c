@@ -5,8 +5,6 @@ static struct {
   jerry_value_t sprite_remove;
 } props = {0};
 
-static jerry_value_t sprite_object_pool[SPRITE_COUNT] = {0};
-
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -29,9 +27,12 @@ static char jerry_value_to_char(jerry_value_t val) {
 }
 
 JERRYXX_FUN(setMap) {
+  dbg("aight mofos we settin a map");
   
   dbg("module_native::setMap");
   JERRYXX_CHECK_ARG(0, "str");
+
+  dbg("thats a nice str u got dere");
 
   char *tmp = temp_str_mem();
   jerry_size_t nbytes = jerry_string_to_char_buffer(
@@ -40,6 +41,12 @@ JERRYXX_FUN(setMap) {
     sizeof(state->temp_str_mem) - 1
   );
   tmp[nbytes] = '\0'; 
+
+  dbgf("read in %d bytes from a js str (it was %d long, we have %d in our strmem)",
+         nbytes,
+         jerry_get_string_length(JERRYXX_GET_ARG(0)),
+         sizeof(state->temp_str_mem)
+         );
 
   map_set(tmp);
 
@@ -86,7 +93,6 @@ JERRYXX_FUN(native_frame_cb_fn) {
   return jerry_create_undefined(); 
 }
 
-#ifdef SPADE_EMBEDDED
 JERRYXX_FUN(native_piano_queue_song_fn) {
   jerry_value_t song_str = jerry_acquire_value(JERRYXX_GET_ARG(0));
   piano_queue_song(
@@ -104,7 +110,6 @@ JERRYXX_FUN(native_piano_unqueue_song_fn) {
 JERRYXX_FUN(native_piano_is_song_queued_fn) {
   return jerry_create_boolean(piano_is_song_queued((void *)JERRYXX_GET_ARG(0)));
 }
-#endif
 
 JERRYXX_FUN(native_legend_clear_fn) { 
   dbg("module_native::native_legend_clear_fn");
@@ -378,17 +383,17 @@ static jerry_value_t sprite_to_jerry_object(Sprite *s) {
 
   int i = s - state->sprite_pool;
 
-  if (!sprite_object_pool[i])
-    sprite_object_pool[i] = sprite_alloc_jerry_object(s);
+  if (!s->object)
+    s->object = sprite_alloc_jerry_object(s);
 
-  return jerry_acquire_value(sprite_object_pool[i]);
+  return jerry_acquire_value(s->object);
 }
 
 static void sprite_free_jerry_object(Sprite *s) {
   int i = s - state->sprite_pool;
 
-  if (sprite_object_pool[i]) {
-    jerry_value_t so = sprite_object_pool[i];
+  if (s->object) {
+    jerry_value_t so = s->object;
 
     jerry_value_t x     = jerry_get_property(so, props.x    );
     jerry_value_t y     = jerry_get_property(so, props.y    );
@@ -427,7 +432,7 @@ static void sprite_free_jerry_object(Sprite *s) {
     jerry_release_value(_type);
 
     jerry_release_value(so);
-    sprite_object_pool[i] = 0;
+    s->object = 0;
   }
 }
 
@@ -637,8 +642,7 @@ JERRYXX_FUN(native_text_clear_fn) {
 
 
 static void module_native_init(jerry_value_t exports) {
-  memset(sprite_object_pool, 0, sizeof(sprite_object_pool));
-  memset(&props,             0, sizeof(props));
+  memset(&props, 0, sizeof(props));
 
   props_init();
 
@@ -676,11 +680,9 @@ static void module_native_init(jerry_value_t exports) {
   jerryxx_set_property_function(exports, MSTR_NATIVE_press_cb, native_press_cb_fn);
   jerryxx_set_property_function(exports, MSTR_NATIVE_frame_cb, native_frame_cb_fn);
 
-  #ifdef SPADE_EMBEDDED
   jerryxx_set_property_function(exports, MSTR_NATIVE_piano_queue_song, native_piano_queue_song_fn);
   jerryxx_set_property_function(exports, MSTR_NATIVE_piano_unqueue_song, native_piano_unqueue_song_fn);
   jerryxx_set_property_function(exports, MSTR_NATIVE_piano_is_song_queued, native_piano_is_song_queued_fn);
-  #endif
 }
 
 // moved JS wrapper into engine.js

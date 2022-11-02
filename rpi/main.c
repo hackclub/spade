@@ -1,20 +1,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include "pico/stdlib.h"
-#include "hardware/spi.h"
-#include "hardware/timer.h"
-#include "pico/util/queue.h"
-#include "pico/multicore.h"
-
-#include "piano.h"
-#include "ST7735_TFT.h"
-#include "upload.h"
-
-#define ARR_LEN(arr) (sizeof(arr) / sizeof(arr[0]))
 
 #define yell puts
-#if 0
+#if 1
   #define dbg puts
   #define dbgf printf
 #else
@@ -22,9 +11,20 @@
   #define dbgf(...) ;
 #endif
 
-static void oom(void) { puts("oom!"); }
+#include "pico/stdlib.h"
+#include "hardware/spi.h"
+#include "hardware/timer.h"
+#include "pico/util/queue.h"
+#include "pico/multicore.h"
+#include "jerry_mem.h"
+
+#include "audio.h"
+#include "ST7735_TFT.h"
+#include "upload.h"
+
+#define ARR_LEN(arr) (sizeof(arr) / sizeof(arr[0]))
 char errorbuf[512] = "";
-bool fatal_error = false;
+
 #include "base_engine.c"
 
 #include "jerryscript.h"
@@ -34,6 +34,16 @@ bool fatal_error = false;
 static void module_native_init(jerry_value_t exports);
 #include "js.h"
 #include "module_native.c"
+
+/* permanent loop rendering errbuf */
+static void fatal_error() {
+  while (1) {
+    uint16_t screen[160 * 128] = {0};
+
+    render_errorbuf(screen);
+    st7735_fill(screen);
+  }
+}
 
 #define HISTORY_LEN (64)
 typedef struct {
@@ -104,11 +114,16 @@ static void core1_entry(void) {
 }
 
 static void game_init(void) {
+  /* gotta start this up early because base_engine.c uses its heap */
+  jerry_init (JERRY_INIT_MEM_STATS);
+
+  dbg("base_engine.c:init");
   /* init base engine */
   init(sprite_free_jerry_object); /* gosh i should namespace base engine */
 
   /* init js */
-  js_init_with(save_read(), strlen(save_read()));
+  dbg("js.h:run");
+  js_run(save_read(), strlen(save_read()));
 }
 
 static int load_new_scripts(void) {
@@ -188,26 +203,25 @@ int main() {
 
     load_new_scripts();
   }
+  dbg("clearing errorbuf");
   memset(errorbuf, 0, sizeof(errorbuf));
 
   /* drain keypresses */
+  dbg("draining keypresses");
   while (multicore_fifo_rvalid()) multicore_fifo_pop_blocking();
 
   game_init();
+
+  dbg("piano_init time!");
   piano_init((PianoOpts) {
     .song_free = piano_jerry_song_free,
     .song_chars = piano_jerry_song_chars,
   });
+  audio_init();
 
   absolute_time_t last = get_absolute_time();
+  dbg("okay launching game loop");
   while(1) {
-    if (fatal_error) {
-      uint16_t screen[160 * 128] = {0};
-      render_errorbuf(screen);
-      st7735_fill(screen);
-      continue;
-    }
-
     /* input handling */
     while (multicore_fifo_rvalid())
       spade_call_press(multicore_fifo_pop_blocking());
@@ -219,13 +233,10 @@ int main() {
     spade_call_frame(elapsed);
     js_promises();
 
-    piano_try_push_samples();
+    audio_try_push_samples();
 
     /* upload new scripts */
-    if (load_new_scripts()) {
-      /* jerry_cleanup(); game_init(); */
-      break;
-    }
+    if (load_new_scripts()) break;
 
     /* render */
     uint16_t screen[160 * 128] = {0};

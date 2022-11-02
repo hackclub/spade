@@ -1,6 +1,7 @@
 #include <stdint.h>
 #include "errorbuf.h"
 #include "font.h"
+#include "jerryscript.h"
 
 #ifdef __wasm__
 
@@ -8,7 +9,6 @@
   
   extern void putchar(char c);
   extern void putint(int i);
-  extern void oom();
   extern unsigned char __heap_base;
   #define PAGE_SIZE (1 << 16)
 
@@ -66,9 +66,11 @@ typedef struct {
 
 typedef struct Sprite Sprite;
 struct Sprite {
-  int x, y, dx, dy;
-  uint16_t next; /* index of next sprite in list + 1 (0 null) */
   char kind;
+  int8_t  dx, dy;
+  uint16_t x,  y;
+  uint16_t next; /* index of next sprite in list + 1 (0 null) */
+  jerry_value_t object;
 };
 static void map_free(Sprite *s);
 static Sprite *map_alloc(void);
@@ -77,8 +79,6 @@ static uint8_t map_active(Sprite *s, uint32_t generation);
 typedef struct { Sprite *sprite; int x, y; uint8_t dirty; } MapIter;
 
 #define PER_CHAR (255)
-#define PER_DOODLE (100)
-#define SPRITE_COUNT (512)
 
 #define SCREEN_SIZE_X (160)
 #define SCREEN_SIZE_Y (128)
@@ -92,8 +92,8 @@ typedef struct {
   /* some SoA v. AoS shit goin on here man */
   int doodle_index_count;
   uint8_t legend_doodled[PER_CHAR]; /* PER_CHAR = because it's used for assigning indices */
-  Doodle legend[PER_DOODLE];
-  Doodle legend_resized[PER_DOODLE];
+  Doodle *legend;         /* tied to state->legend_size */
+  Doodle *legend_resized; /* tied to state->legend_size */
 
 } State_Render;
 
@@ -108,11 +108,14 @@ typedef struct {
   uint8_t char_to_index[PER_CHAR];
 
   uint8_t solid[PER_CHAR];
-  uint8_t push_table[PER_DOODLE * PER_DOODLE / 8];
+  uint16_t legend_size;
+  uint8_t *push_table; /* tied to state->legend_size */
 
-  uint8_t  sprite_slot_active[SPRITE_COUNT];
-  uint32_t sprite_slot_generation[SPRITE_COUNT];
-  Sprite sprite_pool[SPRITE_COUNT];
+  size_t    sprite_pool_size;
+  Sprite   *sprite_pool;
+  uint8_t  *sprite_slot_active;
+  uint32_t *sprite_slot_generation;
+
   uint16_t *map; /* indexes into sprite_pool + 1 (0 null) */
 
   int tile_size; /* how small tiles have to be to fit map on screen */
@@ -124,7 +127,6 @@ typedef struct {
      probably use stack memory instead. It started out as a way to pass
      strings across the WASM <-> JS barrier. */
   char temp_str_mem[(1 << 12)];
-  MapIter temp_MapIter_mem;
 } State;
 static State *state = 0;
 
@@ -180,14 +182,14 @@ static void push_table_write(char x_char, char y_char) {
   int x = state->char_to_index[(int) x_char];
   int y = state->char_to_index[(int) y_char];
 
-  int i = y*PER_DOODLE + x;
+  int i = y*state->legend_size + x;
   state->push_table[i/8] |= 1 << (i % 8);
 }
 static uint8_t push_table_read(char x_char, char y_char) {
   int x = state->char_to_index[(int) x_char];
   int y = state->char_to_index[(int) y_char];
 
-  int i = y*PER_DOODLE + x;
+  int i = y*state->legend_size + x;
   int q = 1 << (i % 8);
   return !!(state->push_table[i/8] & q);
 }
@@ -195,6 +197,82 @@ static uint8_t push_table_read(char x_char, char y_char) {
 static Sprite *get_sprite(uint16_t i) {
   if (i == 0) return 0;
   return state->sprite_pool + i - 1;
+}
+
+static void sprite_pool_realloc(int size) {
+  size_t start_size = state->sprite_pool_size;
+
+  dbg("bouta call a bunch of realloc!");
+#define realloc_n(arr, os, ns) jerry_realloc((arr),                 \
+                                             sizeof((arr)[0]) * os, \
+                                             sizeof((arr)[0]) * ns);
+  state->sprite_slot_active     = realloc_n(state->sprite_slot_active    , start_size, size);
+  dbg("you get a realloc ...");
+  state->sprite_slot_generation = realloc_n(state->sprite_slot_generation, start_size, size);
+  dbg("and you get a realloc ...");
+  state->sprite_pool            = realloc_n(state->sprite_pool           , start_size, size);
+  dbg("and you!");
+#undef realloc_n
+
+  int worked = state->sprite_slot_active     &&
+               state->sprite_slot_generation &&
+               state->sprite_pool             ;
+  dbg("let's see if it worked ...");
+  dbgf("state->sprite_slot_active     = %lu\n", state->sprite_slot_active    );
+  dbgf("state->sprite_slot_generation = %lu\n", state->sprite_slot_generation);
+  dbgf("state->sprite_pool            = %lu\n", state->sprite_pool           );
+
+  if (!worked) {
+    snprintf(
+      errorbuf, sizeof(errorbuf),
+      "%lu sprites (%lu bytes!) is too many to fit on the pico!",
+      state->sprite_pool_size,
+      state->sprite_pool_size * sizeof(Sprite)
+    );
+    fatal_error();
+  }
+
+  /* great, we were able to allocate enough memory */
+  state->sprite_pool_size = size;
+}
+
+static void legend_doodles_realloc(int size) {
+  size_t start_size = state->legend_size;
+
+  size_t push_table_bytes_old = start_size * start_size / 8;
+  size_t push_table_bytes_new =       size *       size / 8;
+  state->push_table = jerry_realloc(state->push_table,
+                                    push_table_bytes_old,
+                                    push_table_bytes_new);
+
+  State_Render *sr = state->render;
+#define realloc_n(arr, os, ns) jerry_realloc((arr),                 \
+                                             sizeof((arr)[0]) * os, \
+                                             sizeof((arr)[0]) * ns);
+  sr->legend         = realloc_n(sr->legend        , start_size, size);
+  sr->legend_resized = realloc_n(sr->legend_resized, start_size, size);
+#undef realloc_n
+
+  int worked = state->push_table  &&
+               sr->legend         &&
+               sr->legend_resized  ;
+
+  dbgf("state->push_table     = %lu\n", state->push_table  );
+  dbgf("   sr->legend         = %lu\n", sr->legend         );
+  dbgf("   sr->legend_resized = %lu\n", sr->legend_resized );
+
+  if (!worked) {
+    snprintf(
+      errorbuf, sizeof(errorbuf),
+      "%d drawings (%lu bytes!) is too many to fit on the pico!",
+      state->legend_size,
+      state->legend_size * sizeof(Doodle) * 2 + push_table_bytes_new
+    );
+    fatal_error();
+  }
+
+  /* great, we were able to allocate enough memory */
+  state->legend_size = size;
 }
 
 WASM_EXPORT void text_add(char *str, char palette_index, int x, int y) {
@@ -237,6 +315,8 @@ WASM_EXPORT void init(void (*map_free_cb)(Sprite *)) {
 
   __builtin_memset(state->render, 0, sizeof(State_Render));
 
+  sprite_pool_realloc(512);
+  legend_doodles_realloc(50);
 
   // Grey
   state->render->palette[char_to_palette_index('0')] = color16(  0,   0,   0);
@@ -272,7 +352,7 @@ static int render_xy_to_idx(int x, int y) {
 
 /* call this when the map changes size, or when the legend changes */
 static void render_resize_legend(void) {
-  __builtin_memset(&state->render->legend_resized, 0, sizeof(state->render->legend_resized));
+  __builtin_memset(state->render->legend_resized, 0, sizeof(Doodle) * state->legend_size);
 
   /* how big do our tiles need to be to fit them all snugly on screen? */
   float min_tile_x = SCREEN_SIZE_X / state->width;
@@ -414,14 +494,15 @@ WASM_EXPORT void render(Color *screen) {
 }
 
 static Sprite *map_alloc(void) {
-  for (int i = 0; i < SPRITE_COUNT; i++) {
+  for (int i = 0; i < state->sprite_pool_size; i++) {
     if (state->sprite_slot_active[i] == 0) {
       state->sprite_slot_active[i] = 1;
       return state->sprite_pool + i;
     }
   }
-  oom();
-  return 0;
+
+  sprite_pool_realloc(state->sprite_pool_size * 1.2f);
+  return map_alloc();
 }
 static void map_free(Sprite *s) {
   if (state->map_free_cb) state->map_free_cb(s);
@@ -505,9 +586,14 @@ WASM_EXPORT Sprite *map_add(int x, int y, char kind) {
 }
 
 WASM_EXPORT void map_set(char *str) {
-  if (state->map != NULL) free(state->map);
-  for (int i = 0; i < SPRITE_COUNT; i++)
+  dbg("wormed ya way down into base_engine.c");
+
+  if (state->map != NULL)
+    jerry_heap_free(state->map,
+                    state->width * state->height * sizeof(Sprite*));
+  for (int i = 0; i < state->sprite_pool_size; i++)
     map_free(state->sprite_pool + i);
+  dbg("freed some sprites, maybe a map");
 
   int tx = 0, ty = 0;
   char *str_dup = str;
@@ -521,14 +607,16 @@ WASM_EXPORT void map_set(char *str) {
   } while (*str_dup++);
   state->width = tx;
   state->height = ty+1;
+  dbg("parsed, found dims");
 
-  state->map = calloc(state->width * state->height, sizeof(Sprite*));
+  state->map = jerry_calloc(state->width * state->height, sizeof(Sprite*));
   if (state->map == NULL) {
     yell("AAAAAAAAA (map too big)");
-    fatal_error = true;
     snprintf(errorbuf, sizeof(errorbuf), "map too big to fit in memory (%dx%d)", state->width, state->height);
-    return;
+    fatal_error();
   }
+
+  dbg("so we got us a map, time to alloc sprites");
 
   tx = 0, ty = 0;
   do {
@@ -539,12 +627,20 @@ WASM_EXPORT void map_set(char *str) {
       case '\0':               break;
       default: {
         Sprite *s = map_alloc();
+        dbg("alloced us a sprite");
+
         *s = (Sprite) { .x = tx, .y = ty, .kind = *str };
+        dbg("filled in some fields");
+
         state->map[tx + ty * state->width] = s - state->sprite_pool + 1;
+        dbg("put 'em on the map");
+
         tx++;
       } break;
     }
   } while (*str++);
+
+  dbg("alrighty, lemme resize a legend");
 
   render_resize_legend();
 }
@@ -716,11 +812,6 @@ WASM_EXPORT void sprite_set_kind(Sprite *s, char kind) { s->kind = kind; }
 
 WASM_EXPORT void MapIter_position(MapIter *m, int x, int y) { m->x = x; m->y = y; }
 
-WASM_EXPORT MapIter *temp_MapIter_mem(void) {
-  __builtin_memset(&state->temp_MapIter_mem, 0, sizeof(state->temp_MapIter_mem));
-  return &state->temp_MapIter_mem;
-}
-
 #endif
 
 WASM_EXPORT void map_clear_deltas(void) {
@@ -746,14 +837,15 @@ WASM_EXPORT void legend_doodle_set(char kind, char *str) {
 
   /* we don't want to increment if index 0 has already been assigned and this is it */
   if (index == 0 && !state->render->legend_doodled[(int)kind]) {
-
-    if (state->render->doodle_index_count >= PER_DOODLE) yell("max doodle count exceeded.");
+    if (state->render->doodle_index_count >= state->legend_size)
+      legend_doodles_realloc(state->legend_size * 1.2f);
     index = state->render->doodle_index_count++;
   }
   state->char_to_index[(int)kind] = index;
 
   state->render->legend_doodled[(int)kind] = 1;
   Doodle *d = state->render->legend + index;
+  dbgf("bouta write to %lu + %d\n", state->render->legend, index);
 
   int px = 0, py = 0;
   do {
@@ -775,8 +867,8 @@ WASM_EXPORT void legend_doodle_set(char kind, char *str) {
 }
 WASM_EXPORT void legend_clear(void) {
   state->render->doodle_index_count = 0;
-  __builtin_memset(&state->render->legend, 0, sizeof(state->render->legend));
-  __builtin_memset(&state->render->legend_resized, 0, sizeof(state->render->legend_resized));
+  __builtin_memset(state->render->legend, 0, sizeof(Doodle) * state->legend_size);
+  __builtin_memset(state->render->legend_resized, 0, sizeof(Doodle) * state->legend_size);
   __builtin_memset(&state->render->legend_doodled, 0, sizeof(state->render->legend_doodled));
   __builtin_memset(&state->char_to_index, 0, sizeof(state->char_to_index));
 }
@@ -789,7 +881,7 @@ WASM_EXPORT void push_table_set(char pusher, char pushes) {
   push_table_write(pusher, pushes);
 }
 WASM_EXPORT void push_table_clear(void) {
-  __builtin_memset(&state->push_table, 0, sizeof(state->push_table));
+  __builtin_memset(state->push_table, 0, state->legend_size*state->legend_size/8);
 }
 
 void render_errorbuf(Color *screen) {

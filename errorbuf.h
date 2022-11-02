@@ -1,2 +1,2 @@
 extern char errorbuf[512]; // Buffer for error messages
-extern bool fatal_error; // True if error is fatal
+static void fatal_error(void); // True if error is fatal

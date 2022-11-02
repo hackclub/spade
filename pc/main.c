@@ -4,17 +4,22 @@
 #include <stdlib.h>
 #include <stdint.h>
 
+#include "audio.h"
+
 #if 1
-#define dbg(...) ;
+  #define dbg(...) ;
+  #define dbgf(...) ;
 #else
-#define dbg puts
+  #define dbgf printf
+  #define dbg puts
 #endif
+
+#include "jerry_mem.h"
 
 #define yell puts
 
-static void oom(void) { yell("oom!"); abort(); }
 char errorbuf[512] = "";
-bool fatal_error = false;
+static void fatal_error(void) { abort(); }
 #include "base_engine.c"
 
 #include "jerryscript.h"
@@ -77,9 +82,8 @@ void render_stats(Color *screen) {
   sprintf(bitmaps, "bitmaps: %d (%d)", bitmap_count, peak_bitmap_count);
 
   int sprite_count = 0;
-  for (int i = 0; i < SPRITE_COUNT; i++) {
-    if (state->sprite_slot_active[i] != 0) sprite_count++;
-  }
+  for (int i = 0; i < state->sprite_pool_size; i++)
+    sprite_count += state->sprite_slot_active[i];
   if (sprite_count > peak_sprite_count) peak_sprite_count = sprite_count;
   sprintf(sprites, "sprites: %d (%d)", sprite_count, peak_sprite_count);
 
@@ -97,7 +101,21 @@ static void js_init(void) {
   ;
 
   const jerry_length_t script_size = sizeof (script) - 1;
-  js_init_with(script, script_size);
+  js_run(script, script_size);
+}
+
+void piano_jerry_song_free(void *p) {
+  /* it's straight up a jerry_value_t, not even a pointer to one */
+  jerry_value_t jvt = (jerry_value_t)p;
+
+  jerry_release_value(jvt);
+}
+int piano_jerry_song_chars(void *p, char *buf, int buf_len) {
+  /* it's straight up a jerry_value_t, not even a pointer to one */
+  jerry_value_t jvt = (jerry_value_t)p;
+
+  int read = jerry_string_to_char_buffer(jvt, (jerry_char_t *)buf, (jerry_size_t) buf_len);
+  return read;
 }
 
 int main() {
@@ -105,28 +123,29 @@ int main() {
   if (!window) return 1;
   mfb_set_keyboard_callback(window, keyboard);
 
+  jerry_init (JERRY_INIT_MEM_STATS);
   init(sprite_free_jerry_object); /* god i REALLY need to namespace baseengine */
+
+  State_Render *sr = state->render;
+
   js_init();
   Color screen[SPADE_WIN_SIZE_X * SPADE_WIN_SIZE_Y] = {0};
+
+  piano_init((PianoOpts) {
+    .song_free = piano_jerry_song_free,
+    .song_chars = piano_jerry_song_chars,
+  });
+  audio_init();
 
   struct mfb_timer *lastframe = mfb_timer_create();
   mfb_timer_now(lastframe);
   do {
-    if (fatal_error) {
-      memset(screen, 0, sizeof(screen));
-      render_errorbuf(screen);
-      uint8_t ok = STATE_OK == mfb_update_ex(window, screen, SPADE_WIN_SIZE_X, SPADE_WIN_SIZE_Y);
-      if (!ok) {
-        window = 0x0;
-        break;
-      }
-      continue;
-    }
-
     js_promises();
     spade_call_frame(1000.0f * mfb_timer_delta(lastframe));
 
     mfb_timer_now(lastframe);
+
+    audio_try_push_samples();
 
     memset(screen, 0, sizeof(screen));
     render((Color *) screen); /* baseengine */

@@ -9,61 +9,7 @@
 #include <string.h>
 #include <math.h>
 
-#if PICO_ON_DEVICE
-  #include "hardware/clocks.h"
-  #include "hardware/structs/clocks.h"
-#endif
-
-#include "pico/stdlib.h"
-
-#include "pico/audio_i2s.h"
-
-#if PICO_ON_DEVICE
-  #include "pico/binary_info.h"
-  bi_decl(bi_3pins_with_names(PICO_AUDIO_I2S_DATA_PIN, "I2S DIN", PICO_AUDIO_I2S_CLOCK_PIN_BASE, "I2S BCK", PICO_AUDIO_I2S_CLOCK_PIN_BASE+1, "I2S LRCK"));
-#endif
-
-/* gaps in your audio? increase this */
-#define SAMPLES_PER_BUFFER (256*8)
-#define SAMPLES_PER_SECOND 24000
 #define ARR_LEN(arr) (sizeof(arr) / sizeof(arr[0]))
-
-static struct audio_buffer_pool *audio_buffer_pool_init() {
-
-  static audio_format_t audio_format = {
-    .format = AUDIO_BUFFER_FORMAT_PCM_S16,
-    .sample_freq = SAMPLES_PER_SECOND,
-    .channel_count = 1,
-  };
-
-  static struct audio_buffer_format producer_format = {
-    .format = &audio_format,
-    .sample_stride = 2
-  };
-
-  struct audio_buffer_pool *producer_pool = audio_new_producer_pool(&producer_format, 3,
-                                    SAMPLES_PER_BUFFER); // todo correct size
-  bool __unused ok;
-  const struct audio_format *output_format;
-
-  struct audio_i2s_config config = {
-    .data_pin = PICO_AUDIO_I2S_DATA_PIN,
-    .clock_pin_base = PICO_AUDIO_I2S_CLOCK_PIN_BASE,
-    .dma_channel = 0,
-    .pio_sm = 0,
-  };
-
-  output_format = audio_i2s_setup(&audio_format, &config);
-  if (!output_format) {
-    panic("PicoAudio: Unable to open audio device.\n");
-  }
-
-  ok = audio_i2s_connect(producer_pool);
-  assert(ok);
-  audio_i2s_set_enabled(true);
-
-  return producer_pool;
-}
 
 typedef enum {
   Sound_Sine,
@@ -73,11 +19,11 @@ typedef enum {
   Sound_COUNT,
 } Sound;
 
+#include "piano.h"
 #include "parse_tune/parse_tune.h"
 
 #define TABLE_LEN 2048
 
-#include "piano.h"
 
 typedef struct {
   uint32_t step;
@@ -117,7 +63,6 @@ const float sound_weights[Sound_COUNT] = {
 };
 static struct {
   int16_t sample_table[Sound_COUNT][TABLE_LEN];
-  struct audio_buffer_pool *ap;
 
   Channel chan[CHAN_COUNT];
 
@@ -176,7 +121,7 @@ void piano_init(PianoOpts opts) {
     float t = (float)i / (float)TABLE_LEN;
     float soundf[Sound_COUNT] = {
       [Sound_Sine]     = cosf(i * 2 * (float) (M_PI / TABLE_LEN)),
-      [Sound_Triangle] = (1.0f - 2.0f * 2.0f * fabsf(0.5 - t)),
+      [Sound_Triangle] = (1.0f - 2.0f * 2.0f * fabsf(0.5f - t)),
       [Sound_Sawtooth] = (1.0f - 2.0f * 2.0f * fmodf(t, 0.5f)),
       [Sound_Square]   = (fmodf(t, 0.5f) > 0.25f) ? 1.0f : -1.0f
     };
@@ -184,9 +129,6 @@ void piano_init(PianoOpts opts) {
     for (int s = 0; s < Sound_COUNT; s++)
       piano_state.sample_table[s][i] = (int)(32767 * sound_weights[s]) * soundf[s];
   }
-
-  /* initialize pico-audio audio_buffer_pool */
-  piano_state.ap = audio_buffer_pool_init();
 }
 
 static int16_t piano_compute_sample(Channel *chan, float *vol_used) {
@@ -205,7 +147,7 @@ static int16_t piano_compute_sample(Channel *chan, float *vol_used) {
       return 0;
     }
 
-    while (true) {
+    while (1) {
       if (!tune_parse(&chan->nrs, song)) {
         chan->nrs = (NoteReadState) {0};
 
@@ -253,13 +195,9 @@ static int16_t piano_compute_sample(Channel *chan, float *vol_used) {
   }
 }
 
-void piano_try_push_samples(void) {
-  struct audio_buffer *buffer = take_audio_buffer(piano_state.ap, false);
-  if (buffer == NULL) return;
-
+void piano_fill_sample_buf(int16_t *samples, int size) {
   /* fill buffer */
-  int16_t *samples = (int16_t *) buffer->buffer->bytes;
-  for (uint i = 0; i < buffer->max_sample_count; i++) {
+  for (int i = 0; i < size; i++) {
     samples[i] = 0;
 
     /* contribution from all channels cannot exceed 1.0f */
@@ -271,21 +209,4 @@ void piano_try_push_samples(void) {
       if (vol_used <= 1.0f) samples[i] += vol;
     }
   }
-  buffer->sample_count = buffer->max_sample_count;
-
-  /* send to PIO DMA */
-  give_audio_buffer(piano_state.ap, buffer);
 }
-
-/* EX:
-int main() {
-  // stdio_init_all();
-
-  piano_init();
-
-  while (true) piano_try_push_samples();
-
-  puts("...\n");
-
-  return 0;
-} */

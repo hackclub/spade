@@ -1,8 +1,9 @@
 pico_sdk_init()
 add_definitions(-DSPADE_EMBEDDED)
-
-add_library(Piano ../piano.c)
-target_compile_definitions(Piano PRIVATE
+add_compile_definitions(
+        PICO_HEAP_SIZE=65536)
+add_library(Audio rpi/audio.c)
+target_compile_definitions(Audio PRIVATE
         # compile time configuration of I2S
         PICO_AUDIO_I2S_MONO_INPUT=1
         #define for our example code
@@ -13,18 +14,21 @@ target_compile_definitions(Piano PRIVATE
 #            PICO_DEFAULT_UART_TX_PIN=28
 #            PICO_DEFAULT_UART_RX_PIN=29
         )
-target_link_libraries(Piano PRIVATE
+target_link_libraries(Audio PRIVATE
   pico_stdlib
   pico_audio_i2s
 )
 
 target_link_libraries(spade
-  Piano
+  Audio
   pico_stdlib
   pico_multicore
   hardware_spi
   hardware_timer
 )
+
+add_compile_definitions(
+        PICO_HEAP_SIZE=65536)
 
 pico_enable_stdio_usb(spade 1)
 pico_enable_stdio_uart(spade 0)
