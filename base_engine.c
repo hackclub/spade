@@ -720,10 +720,16 @@ WASM_EXPORT uint8_t map_tiles_with(MapIter *m, char *kinds) {
     }
 
     if (state->map[m->x + m->y * state->width]) {
+      uint8_t kinds_seen[255] = {0};
       int kinds_found = 0;
 
-      for (Sprite *s = get_sprite(state->map[m->x + m->y * state->width]); s; s = get_sprite(s->next))
-        kinds_found += kinds_needed[(int)s->kind];
+      for (Sprite *s = get_sprite(state->map[m->x + m->y * state->width]);
+           s;
+           s = get_sprite(s->next)
+      ) {
+        kinds_found += kinds_needed[(int)s->kind] && !kinds_seen[(int)s->kind];
+        kinds_seen[(int)s->kind] = 1;
+      }
 
       if (kinds_found == kinds_len) {
         m->sprite = get_sprite(state->map[m->x + m->y * state->width]);

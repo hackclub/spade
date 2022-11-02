@@ -122,8 +122,8 @@ native.press_cb(pin => {
 {
   const timers = [];
   let id = 0;
-  setTimeout  = (fn, ms) => (timers.push({ fn, ms, id }), id++);
-  setInterval = (fn, ms) => (timers.push({ fn, ms, id, restartAt: ms }), id++);
+  setTimeout  = (fn, ms=10) => (timers.push({ fn, ms, id }), id++);
+  setInterval = (fn, ms=10) => (timers.push({ fn, ms, id, restartAt: ms }), id++);
   clearTimeout = clearInterval = id => {
     const index = timers.findIndex(t => t.id == id);
     if (index !== -1) timers.splice(index, 1);

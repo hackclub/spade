@@ -30,7 +30,7 @@ typedef struct {
   int16_t samples[SAMPLES_PER_BUFFER];
 } SampleBuf;
 
-static SampleBuf sample_bufs[5] = {0};
+static SampleBuf sample_bufs[3] = {0};
 
 void audio_init(void) {
   audio_hw_init();
@@ -54,7 +54,6 @@ void audio_try_push_samples(void) {
     }
 
     piano_fill_sample_buf(sb->samples, SAMPLES_PER_BUFFER);
-    printf("writing %d\n", writer);
     sb->state = SampleBufState_Full;
 
     pthread_mutex_unlock(&sb->mutex);
