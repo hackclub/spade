@@ -28,9 +28,9 @@ typedef struct {
   // char *str; /* iterated through */
 } NoteReadState;
 
-static uint8_t note_read(NoteReadState *nrs, char *song) {
+static uint8_t note_read(NoteReadState *nrs, char *char_source) {
   char *endptr = NULL;
-  char *str = song + nrs->i;
+  char *str = char_source + nrs->i;
 
   /* if (*str == 0) return 0; */
 
@@ -122,18 +122,18 @@ static uint8_t note_read(NoteReadState *nrs, char *song) {
     }
   }
 
-  nrs->i = str - song;
+  nrs->i = str - char_source;
   return 0;
 
   THERES_MORE:
-  nrs->i = str - song;
+  nrs->i = str - char_source;
   return 1;
 }
 
-static uint8_t tune_parse(NoteReadState *nrs, char *song) {
+static uint8_t tune_parse(NoteReadState *nrs, char *char_source) {
   bzero(&nrs->ret, sizeof(NrsRet));
 
-  if (note_read(nrs, song)) {
+  if (note_read(nrs, char_source)) {
     if (!nrs->open) {
       /* okay, we've read a whole note, we can finish this note! ... */
       nrs->ret = (NrsRet) {
@@ -143,7 +143,7 @@ static uint8_t tune_parse(NoteReadState *nrs, char *song) {
     }
     return 1;
   }
-  if (song[nrs->i] == '\0') return 0;
+  if (char_source[nrs->i] == '\0') return 0;
 
   return 1;
 }
