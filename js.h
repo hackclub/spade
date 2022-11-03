@@ -58,6 +58,7 @@ static void js_run(const jerry_char_t *script, jerry_length_t script_size) {
   if (jerry_value_is_error (parsed_code)) {
     yell("couldn't parse :(");
     jerryxx_print_error(parsed_code, 1);
+    fatal_error();
     // abort();
   }
 
@@ -68,6 +69,7 @@ static void js_run(const jerry_char_t *script, jerry_length_t script_size) {
   if (jerry_value_is_error (ret_value)) {
     yell("couldn't run :(");
     jerryxx_print_error(ret_value, 1);
+    fatal_error();
     // abort();
   }
 

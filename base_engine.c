@@ -550,13 +550,7 @@ WASM_EXPORT Sprite *map_add(int x, int y, char kind) {
 WASM_EXPORT void map_set(char *str) {
   dbg("wormed ya way down into base_engine.c");
 
-  if (state->map != NULL)
-    jerry_heap_free(state->map,
-                    state->width * state->height * sizeof(Sprite*));
-  for (int i = 0; i < state->sprite_pool_size; i++)
-    map_free(state->sprite_pool + i);
-  dbg("freed some sprites, maybe a map");
-
+  /* figure out how big of an allocation we need to make,  if any */
   int tx = 0, ty = 0;
   char *str_dup = str;
   do {
@@ -570,6 +564,16 @@ WASM_EXPORT void map_set(char *str) {
   state->width = tx;
   state->height = ty+1;
   dbg("parsed, found dims");
+
+  if (!state->width || !state->height) return;
+
+  /* free stuff so we can create new ones */
+  if (state->map != NULL)
+    jerry_heap_free(state->map,
+                    state->width * state->height * sizeof(Sprite*));
+  for (int i = 0; i < state->sprite_pool_size; i++)
+    map_free(state->sprite_pool + i);
+  dbg("freed some sprites, maybe a map");
 
   state->map = jerry_calloc(state->width * state->height, sizeof(Sprite*));
   if (state->map == NULL) {
