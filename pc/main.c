@@ -118,6 +118,89 @@ int piano_jerry_song_chars(void *p, char *buf, int buf_len) {
   return read;
 }
 
+typedef struct { int x, y, width, height; } Rect;
+static Color iq_render(Rect *game, int x, int y) {
+  int cx = x / 8;
+  int cy = y / 8;
+  char c = state->text_char[cy][cx];
+  if (c) {
+    int px = x % 8;
+    int py = y % 8;
+    uint8_t bits = font_pixels[c*8 + py];
+    if ((bits >> (7-px)) & 1)
+      return state->text_color[cy][cx];
+  }
+
+  x -= game->x;
+  y -= game->y;
+  if (x <  0           ) return color16(0, 0, 0);
+  if (y <  0           ) return color16(0, 0, 0);
+  if (x >= game->width ) return color16(0, 0, 0);
+  if (y >= game->height) return color16(0, 0, 0);
+
+  if (state->tile_size == 0) return color16(0, 0, 0);
+  int tx = x / state->tile_size;
+  int ty = y / state->tile_size;
+
+  Sprite *s = get_sprite(state->map[ty*state->width + tx]);
+  while (1) {
+    if (s == 0) return color16(0, 0, 0);
+    Doodle *d = state->render->legend_resized + state->char_to_index[(int)s->kind];
+
+    int px = x % state->tile_size;
+    int py = y % state->tile_size;
+    if (!doodle_pane_read(d->lit, px, py)) {
+      s = get_sprite(s->next);
+      continue;
+    };
+    return state->render->palette[
+      (doodle_pane_read(d->rgb0, px, py) << 0) |
+      (doodle_pane_read(d->rgb1, px, py) << 1) |
+      (doodle_pane_read(d->rgb2, px, py) << 2) |
+      (doodle_pane_read(d->rgb3, px, py) << 3)
+    ];
+  }
+}
+
+Color *write_pixel_screen = 0;
+static void write_pixel(int x, int y, Color c) {
+  write_pixel_screen[y*160 + x] = c;
+}
+
+static void render_calc_bounds(Rect *rect) {
+  if (!(state->width && state->height)) {
+    *rect = (Rect){0};
+    return;
+  }
+
+  int scale;
+  {
+    int scale_x = SCREEN_SIZE_X/(state->width*16);
+    int scale_y = SCREEN_SIZE_Y/(state->height*16);
+
+    scale = (scale_x < scale_y) ? scale_x : scale_y;
+    if (scale < 1) scale = 1;
+
+    state->render->scale = scale;
+  }
+  int size = state->tile_size*scale;
+
+  rect->width = state->width*size;
+  rect->height = state->height*size;
+
+  rect->x = (SCREEN_SIZE_X - rect->width)/2;
+  rect->y = (SCREEN_SIZE_Y - rect->height)/2;
+}
+
+static void game_render(void) {
+  Rect rect = {0};
+  render_calc_bounds(&rect);
+
+  for (int y = 0; y < 128; y++)
+    for (int x = 0; x < 160; x++)
+      write_pixel(x, y, iq_render(&rect, x, y));
+}
+
 int main() {
   struct mfb_window *window = mfb_open_ex("spade", SPADE_WIN_SIZE_X * 2, SPADE_WIN_SIZE_Y * 2, 0);
   if (!window) return 1;
@@ -147,9 +230,10 @@ int main() {
 
     audio_try_push_samples();
 
-    memset(screen, 0, sizeof(screen));
-    render((Color *) screen); /* baseengine */
-    render_errorbuf(screen);
+    memset(screen, 255, sizeof(screen));
+    render_errorbuf();
+    write_pixel_screen = screen;
+    game_render();
     render_stats(screen);
 
     uint8_t ok = STATE_OK == mfb_update_ex(window, screen, SPADE_WIN_SIZE_X, SPADE_WIN_SIZE_Y);

@@ -276,9 +276,17 @@ static void legend_doodles_realloc(int size) {
 }
 
 WASM_EXPORT void text_add(char *str, char palette_index, int x, int y) {
-  for (; *str; str++, x++)
-    state->text_char [y][x] = *str,
+  for (; *str; str++) {
+    if (*str == '\n' || x >= (SCREEN_SIZE_X / 8)) {
+      y++;
+      x = 0;
+      if (*str == '\n') continue;
+    }
+    if (y >= (SCREEN_SIZE_Y / 8)) break;
+    state->text_char [y][x] = *str;
     state->text_color[y][x] = state->render->palette[char_to_palette_index(palette_index)];
+    x++;
+  }
 }
 
 WASM_EXPORT void text_clear(void) {
@@ -890,7 +898,7 @@ WASM_EXPORT void push_table_clear(void) {
   __builtin_memset(state->push_table, 0, state->legend_size*state->legend_size/8);
 }
 
-void render_errorbuf(Color *screen) {
+static void render_errorbuf(void) {
   int y = 0;
   int x = 0;
   for (int i = 0; i < sizeof(errorbuf); i++) {
@@ -901,7 +909,8 @@ void render_errorbuf(Color *screen) {
       if (errorbuf[i] == '\n') continue;
     }
     if (y >= (SCREEN_SIZE_Y / 8)) break;
-    render_char(screen, errorbuf[i], color16(255, 0, 0), x*8, y*8);
+    state->text_color[y][x] = color16(255, 0, 0);
+    state->text_char [y][x] = errorbuf[i];
     x++;
   }
 }
