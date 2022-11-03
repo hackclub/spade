@@ -57,7 +57,7 @@ static void render_char(Color *screen, char c, Color color, int sx, int sy) {
     uint8_t bits = font_pixels[c*8 + y];
     for (int x = 0; x < 8; x++)
       if ((bits >> (7-x)) & 1) {
-        screen[render_xy_to_idx(sx+x, sy+y)] = color;
+        screen[(sy+y)*160 + sx+x] = color;
       }
   }
 }

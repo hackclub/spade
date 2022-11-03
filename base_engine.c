@@ -19,8 +19,6 @@
 #else
 
   #if SPADE_EMBEDDED
-    #define FUCKED_COORDINATE_SYSTEM
-
     static uint16_t color16(uint8_t r, uint8_t b, uint8_t g) {
       r = (uint8_t)((float)((float)r / 255.0f) * 31.0f);
       g = (uint8_t)((float)((float)g / 255.0f) * 31.0f);
@@ -333,14 +331,6 @@ WASM_EXPORT char *temp_str_mem(void) {
   return state->temp_str_mem;
 }
 
-static int render_xy_to_idx(int x, int y) {
-#ifdef FUCKED_COORDINATE_SYSTEM
-  return (SCREEN_SIZE_X - x - 1)*SCREEN_SIZE_Y + y;
-#else
-  return SCREEN_SIZE_X*y + x;
-#endif
-}
-
 /* call this when the map changes size, or when the legend changes */
 static void render_resize_legend(void) {
   __builtin_memset(state->render->legend_resized, 0, sizeof(Doodle) * state->legend_size);
@@ -379,7 +369,7 @@ WASM_EXPORT void render_set_background(char kind) {
   state->background_sprite = kind;
 }
 
-typedef struct { int x, y, width, height; } Rect;
+typedef struct { int x, y, width, height, scale; } Rect;
 static Color render_pixel(Rect *game, int x, int y) {
   int cx = x / 8;
   int cy = y / 8;
@@ -392,8 +382,8 @@ static Color render_pixel(Rect *game, int x, int y) {
       return state->text_color[cy][cx];
   }
 
-  x -= game->x;
-  y -= game->y;
+  x = (x - game->x) / game->scale;
+  y = (y - game->y) / game->scale;
   if (x <  0           ) return color16(0, 0, 0);
   if (y <  0           ) return color16(0, 0, 0);
   if (x >= game->width ) return color16(0, 0, 0);
@@ -402,6 +392,8 @@ static Color render_pixel(Rect *game, int x, int y) {
   if (state->tile_size == 0) return color16(0, 0, 0);
   int tx = x / state->tile_size;
   int ty = y / state->tile_size;
+  if (tx >= state->width ) return color16(0, 0, 0);
+  if (ty >= state->height) return color16(0, 0, 0);
 
   Sprite *s = get_sprite(state->map[ty*state->width + tx]);
   while (1) {
@@ -443,6 +435,7 @@ static void render_calc_bounds(Rect *rect) {
 
     state->render->scale = scale;
   }
+  rect->scale = scale;
   int size = state->tile_size*scale;
 
   rect->width = state->width*size;
