@@ -119,7 +119,7 @@ static void write_data(uint8_t data_){
   tft_cs_high();
 }
 
-void st7735_fill(uint16_t *pixels) {
+static void st7735_fill_start() {
   tft_cs_low();
 
   spi_command(ST7735_CASET);
@@ -130,13 +130,17 @@ void st7735_fill(uint16_t *pixels) {
 
   spi_command(ST7735_RAMWR);
   tft_dc_high(); /* (no data) */
+}
 
-  spi_write_blocking(SPI_TFT_PORT, (uint8_t *)pixels, 160 * 128 * sizeof(uint16_t));
+static void st7735_fill_send(uint16_t pixel) {
+  spi_write_blocking(SPI_TFT_PORT, (uint8_t *)&pixel, sizeof(uint16_t));
+}
 
+static void st7735_fill_finish(void) {
   tft_cs_high();
 }
 
-void st7735_reset() {
+static void st7735_reset() {
   tft_rst_high() ;
   sleep_ms(10);
   tft_rst_low();
@@ -145,7 +149,7 @@ void st7735_reset() {
   sleep_ms(10);
 }
 
-void st7735_init() {
+static void st7735_init() {
   /* enable backlight */
   {
     gpio_init(17);
@@ -218,7 +222,7 @@ void st7735_init() {
     write_data(0x0E);
     write_command(ST7735_INVOFF);
     write_command(ST7735_MADCTL);
-    write_data(0xC8);
+    write_data(0x40 | 0x10 | 0x08);// 0xC8);
     write_command(ST7735_COLMOD);
     write_data(0x05); 
   }

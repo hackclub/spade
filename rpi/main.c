@@ -39,10 +39,8 @@ static void module_native_init(jerry_value_t exports);
 /* permanent loop rendering errbuf */
 static void fatal_error() {
   while (1) {
-    uint16_t screen[160 * 128] = {0};
-
-    render_errorbuf(screen);
-    st7735_fill(screen);
+    // render_errorbuf(screen);
+    // st7735_fill(screen);
   }
 }
 
@@ -115,16 +113,6 @@ static void core1_entry(void) {
 }
 
 static void game_init(void) {
-  /* gotta start this up early because base_engine.c uses its heap */
-  jerry_init (JERRY_INIT_MEM_STATS);
-
-  dbg("base_engine.c:init");
-  /* init base engine */
-  init(sprite_free_jerry_object); /* gosh i should namespace base engine */
-
-  /* init js */
-  dbg("js.h:run");
-  js_run(save_read(), strlen(save_read()));
 }
 
 static int load_new_scripts(void) {
@@ -145,13 +133,21 @@ int piano_jerry_song_chars(void *p, char *buf, int buf_len) {
   return read;
 }
 
+static void write_pixel(int x, int y, Color c) {
+  (void *)x;
+  (void *)y;
+  st7735_fill_send(c);
+}
+
 int main() {
   stdio_init_all();
 
   st7735_init();
 
+  jerry_init (JERRY_INIT_MEM_STATS);
+  init(sprite_free_jerry_object); /* gosh i should namespace base engine */
+
   while(!save_read()) {
-    uint16_t screen[160 * 128] = {0};
     strcpy(errorbuf, "                    \n"
                      "                    \n"
                      "                    \n"
@@ -167,8 +163,10 @@ int main() {
                      "                    \n"
                      "                    \n"
                      " sprig.hackclub.dev \n");
-    render_errorbuf(screen);
-    st7735_fill(screen);
+    render_errorbuf();
+    st7735_fill_start();
+      render(write_pixel);
+    st7735_fill_finish();
 
     load_new_scripts();
   }
@@ -183,7 +181,6 @@ int main() {
   while (multicore_fifo_rvalid()) multicore_fifo_pop_blocking();
 
   while(!multicore_fifo_rvalid()) {
-    uint16_t screen[160 * 128] = {0};
     strcpy(errorbuf, "                    \n"
                      "                    \n"
                      "                    \n"
@@ -199,21 +196,22 @@ int main() {
                      "                    \n"
                      "                    \n"
                      " sprig.hackclub.dev \n");
-    render_errorbuf(screen);
-    st7735_fill(screen);
+    render_errorbuf();
+    st7735_fill_start();
+      render(write_pixel);
+    st7735_fill_finish();
 
     load_new_scripts();
   }
-  dbg("clearing errorbuf");
   memset(errorbuf, 0, sizeof(errorbuf));
+  text_clear();
 
   /* drain keypresses */
-  dbg("draining keypresses");
   while (multicore_fifo_rvalid()) multicore_fifo_pop_blocking();
 
-  game_init();
+  /* init js */
+  js_run(save_read(), strlen(save_read()));
 
-  dbg("piano_init time!");
   piano_init((PianoOpts) {
     .song_free = piano_jerry_song_free,
     .song_chars = piano_jerry_song_chars,
@@ -240,31 +238,33 @@ int main() {
     if (load_new_scripts()) break;
 
     /* render */
-    uint16_t screen[160 * 128] = {0};
-    render(screen);
-    render_errorbuf(screen);
-    st7735_fill(screen);
+    render_errorbuf();
+    st7735_fill_start();
+      render(write_pixel);
+    st7735_fill_finish();
   }
 
-  uint16_t screen[160 * 128] = {0};
   strcpy(errorbuf, "                    \n"
-                    "                    \n"
-                    "                    \n"
-                    "                    \n"
-                    "                    \n"
-                    "                    \n"
-                    "                    \n"
-                    "    PLEASE REBOOT   \n"
-                    "     YOUR SPRIG     \n"
-                    "                    \n"
-                    "                    \n"
-                    "                    \n"
-                    "                    \n"
-                    "                    \n"
-                    " sprig.hackclub.dev \n");
+                   "                    \n"
+                   "                    \n"
+                   "                    \n"
+                   "                    \n"
+                   "                    \n"
+                   "                    \n"
+                   "    PLEASE REBOOT   \n"
+                   "     YOUR SPRIG     \n"
+                   "                    \n"
+                   "                    \n"
+                   "                    \n"
+                   "                    \n"
+                   "                    \n"
+                   " sprig.hackclub.dev \n");
 
-  render_errorbuf(screen);
-  st7735_fill(screen);
+  render_errorbuf();
+  st7735_fill_start();
+    render(write_pixel);
+  st7735_fill_finish();
+
   watchdog_enable(0, false);
   while (1) {}
 }

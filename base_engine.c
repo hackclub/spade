@@ -85,8 +85,6 @@ typedef struct { Sprite *sprite; int x, y; uint8_t dirty; } MapIter;
 
 typedef struct {
   Color palette[16];
-  uint8_t lit[SCREEN_SIZE_Y * SCREEN_SIZE_X / 8];
-  
   int scale;
 
   /* some SoA v. AoS shit goin on here man */
@@ -151,21 +149,6 @@ static uint8_t char_to_palette_index(char c) {
     default: return 0; /* lmfao (anything to quiet the voices.)
                                 (i meant clang warnings. same thing) */
   }
-}
-
-/* almost makes ya wish for generic data structures dont it :shushing_face:
-
-   this was implemented to cut down on RAM usage before I discovered you can
-   control how much RAM gets handed to JS in targets/rp2/target.cmake
-   */
-static void render_lit_write(int x, int y) {
-  int i = x*SCREEN_SIZE_Y + y;
-  state->render->lit[i/8] |= 1 << (i % 8);
-}
-static uint8_t render_lit_read(int x, int y) {
-  int i = x*SCREEN_SIZE_Y + y;
-  int q = 1 << (i % 8);
-  return !!(state->render->lit[i/8] & q);
 }
 
 static void doodle_pane_write(uint8_t *pane, int x, int y) {
@@ -392,57 +375,63 @@ static void render_resize_legend(void) {
   }
 }
 
-static void render_blit_sprite(Color *screen, int sx, int sy, char kind) {
-  int scale = state->render->scale;
-  Doodle *d = state->render->legend_resized + state->char_to_index[(int)kind];
-
-  for (int x = 0; x < state->tile_size; x++)
-    for (int y = 0; y < state->tile_size; y++) {
-
-      if (!doodle_pane_read(d->lit, x, y)) continue;
-      for (  int ox = 0; ox < scale; ox++)
-        for (int oy = 0; oy < scale; oy++) {
-          int px = ox + sx + scale*x;
-          int py = oy + sy + scale*y;
-          if (render_lit_read(px, py)) continue;
-
-          render_lit_write(px, py);
-
-#ifdef FUCKED_COORDINATE_SYSTEM
-          int i = (ox + sx + scale*(state->tile_size - 1 - x)) * SCREEN_SIZE_Y + py;
-#else
-          int i = SCREEN_SIZE_X*py + px;
-#endif
-          screen[i] = state->render->palette[
-            (doodle_pane_read(d->rgb0, x, y) << 0) |
-            (doodle_pane_read(d->rgb1, x, y) << 1) |
-            (doodle_pane_read(d->rgb2, x, y) << 2) |
-            (doodle_pane_read(d->rgb3, x, y) << 3)
-          ];
-        }
-    }
-}
-
-static void render_char(Color *screen, char c, Color color, int sx, int sy) {
-  for (int y = 0; y < 8; y++) {
-    uint8_t bits = font_pixels[c*8 + y];
-    for (int x = 0; x < 8; x++)
-      if ((bits >> (7-x)) & 1) {
-        screen[render_xy_to_idx(sx+x, sy+y)] = color;
-      }
-  }
-}
-
 WASM_EXPORT void render_set_background(char kind) {
   state->background_sprite = kind;
 }
 
-WASM_EXPORT uint8_t map_get_grid(MapIter *m);
-WASM_EXPORT void render(Color *screen) {
-  __builtin_memset(&state->render->lit, 0, sizeof(state->render->lit));
+typedef struct { int x, y, width, height; } Rect;
+static Color render_pixel(Rect *game, int x, int y) {
+  int cx = x / 8;
+  int cy = y / 8;
+  char c = state->text_char[cy][cx];
+  if (c) {
+    int px = x % 8;
+    int py = y % 8;
+    uint8_t bits = font_pixels[c*8 + py];
+    if ((bits >> (7-px)) & 1)
+      return state->text_color[cy][cx];
+  }
 
-  if (!state->width)  goto RENDER_TEXT;
-  if (!state->height) goto RENDER_TEXT;
+  x -= game->x;
+  y -= game->y;
+  if (x <  0           ) return color16(0, 0, 0);
+  if (y <  0           ) return color16(0, 0, 0);
+  if (x >= game->width ) return color16(0, 0, 0);
+  if (y >= game->height) return color16(0, 0, 0);
+
+  if (state->tile_size == 0) return color16(0, 0, 0);
+  int tx = x / state->tile_size;
+  int ty = y / state->tile_size;
+
+  Sprite *s = get_sprite(state->map[ty*state->width + tx]);
+  while (1) {
+    char sprite = (s == 0) ? state->background_sprite : s->kind;
+    if (sprite == 0) return color16(255, 255, 255);
+    Doodle *d = state->render->legend_resized + state->char_to_index[sprite];
+
+    int px = x % state->tile_size;
+    int py = y % state->tile_size;
+    if (!doodle_pane_read(d->lit, px, py)) {
+      if (s) {
+        s = get_sprite(s->next);
+        continue;
+      }
+      return color16(255, 255, 255);
+    };
+    return state->render->palette[
+      (doodle_pane_read(d->rgb0, px, py) << 0) |
+      (doodle_pane_read(d->rgb1, px, py) << 1) |
+      (doodle_pane_read(d->rgb2, px, py) << 2) |
+      (doodle_pane_read(d->rgb3, px, py) << 3)
+    ];
+  }
+}
+
+static void render_calc_bounds(Rect *rect) {
+  if (!(state->width && state->height)) {
+    *rect = (Rect){0};
+    return;
+  }
 
   int scale;
   {
@@ -456,50 +445,22 @@ WASM_EXPORT void render(Color *screen) {
   }
   int size = state->tile_size*scale;
 
-  int pixel_width = state->width*size;
-  int pixel_height = state->height*size;
+  rect->width = state->width*size;
+  rect->height = state->height*size;
 
-  int ox = (SCREEN_SIZE_X - pixel_width)/2;
-  int oy = (SCREEN_SIZE_Y - pixel_height)/2;
-
-
-  // dbg("render: clear to white");
-  for (int y = oy; y < oy+pixel_height; y++)
-    for (int x = ox; x < ox+pixel_width; x++) {
-      screen[render_xy_to_idx(x, y)] = color16(255, 255, 255);
-    }
-
-  // dbg("render: grid");
-  MapIter m = {0};
-  while (map_get_grid(&m))
-    render_blit_sprite(screen,
-#ifdef FUCKED_COORDINATE_SYSTEM
-                       ox + size*(state->width - 1 - m.sprite->x),
-#else
-                       ox + size*m.sprite->x,
-#endif
-                       oy + size*m.sprite->y,
-                       m.sprite->kind);
-
-  // dbg("render: bg");
-  if (state->background_sprite)
-    for (int y = 0; y < state->height; y++)
-      for (int x = 0; x < state->width; x++)
-        render_blit_sprite(screen,
-                           ox + size*x,
-                           oy + size*y,
-                           state->background_sprite);
-
-  RENDER_TEXT:
-  // dbg("render: text");
-  for (int y = 0; y < TEXT_CHARS_MAX_Y; y++)
-    for (int x = 0; x < TEXT_CHARS_MAX_X; x++) {
-      char c = state->text_char[y][x];
-      if (c) render_char(screen, c, state->text_color[y][x], x*8, y*8);
-    }
-
-  // dbg("render: done");
+  rect->x = (SCREEN_SIZE_X - rect->width)/2;
+  rect->y = (SCREEN_SIZE_Y - rect->height)/2;
 }
+
+static void render(void (*write_pixel)(int x, int y, Color c)) {
+  Rect rect = {0};
+  render_calc_bounds(&rect);
+
+  for (int x = 0; x < 160; x++)
+    for (int y = 0; y < 128; y++)
+      write_pixel(x, y, render_pixel(&rect, x, y));
+}
+
 
 static Sprite *map_alloc(void) {
   for (int i = 0; i < state->sprite_pool_size; i++) {
