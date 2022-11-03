@@ -1,7 +1,6 @@
 pico_sdk_init()
 add_definitions(-DSPADE_EMBEDDED)
-add_compile_definitions(
-        PICO_HEAP_SIZE=65536)
+
 add_library(Audio rpi/audio.c)
 target_compile_definitions(Audio PRIVATE
         # compile time configuration of I2S
@@ -27,8 +26,7 @@ target_link_libraries(spade
   hardware_timer
 )
 
-add_compile_definitions(
-        PICO_HEAP_SIZE=65536)
+add_compile_definitions(PICO_HEAP_SIZE=16384)
 
 pico_enable_stdio_usb(spade 1)
 pico_enable_stdio_uart(spade 0)

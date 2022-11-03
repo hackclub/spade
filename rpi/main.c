@@ -37,10 +37,14 @@ static void module_native_init(jerry_value_t exports);
 #include "module_native.c"
 
 /* permanent loop rendering errbuf */
+static void write_pixel(int x, int y, Color c);
 static void fatal_error() {
   while (1) {
-    // render_errorbuf(screen);
-    // st7735_fill(screen);
+    text_clear();
+    render_errorbuf();
+    st7735_fill_start();
+      render(write_pixel);
+    st7735_fill_finish();
   }
 }
 

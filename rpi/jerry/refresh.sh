@@ -12,7 +12,7 @@ python3 jerryscript/tools/build.py \
   --toolchain=../rp2-toolchain.cmake \
   --builddir=$(pwd)/example_build \
   --cmake-param="-DCMAKE_INSTALL_PREFIX=$(pwd)/example_install/" \
-  --mem-heap=150 \
+  --mem-heap=202 \
   --clean \
   --lto=OFF \
   --error-messages=ON \

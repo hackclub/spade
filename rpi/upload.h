@@ -4,7 +4,7 @@ static void core1_entry(void);
 
 /* rationale: half engine, half games? */
 /* NOTE: this has to be a multiple of 4096 (FLASH_SECTOR_SIZE) */
-#define FLASH_TARGET_OFFSET (512 * 1024)
+#define FLASH_TARGET_OFFSET (800 * 1024)
 
 const uint8_t *flash_target_contents = (const uint8_t *) (XIP_BASE + FLASH_TARGET_OFFSET);
 
