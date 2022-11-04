@@ -50,6 +50,43 @@ static void keyboard(struct mfb_window *window, mfb_key key, mfb_key_mod mod, bo
   if (key == KB_KEY_L) spade_call_press(15); // map_move(map_get_first('p'), -1,  0);
 }
 
+static void print_map(void) {
+  /* +1 is for newlines */
+  int mapstr_len = (state->width+1) * state->height;
+  char *mapstr = malloc(1 + mapstr_len);
+  mapstr[mapstr_len] = 0;
+  memset(mapstr, '.', mapstr_len);
+
+  /* insert newlines */
+  int w = state->width, h = state->height;
+  for (int y = 0; y < h; y++) mapstr[y*(w + 1) + w] = '\n';
+
+  MapIter m = {0};
+  while (map_get_grid(&m)) {
+    int i = (state->width+1)*m.sprite->y + m.sprite->x;
+    mapstr[i] = m.sprite->kind;
+  }
+
+  puts(mapstr);
+  free(mapstr);
+  fflush(stdout);
+}
+
+static void simulated_keyboard(void) {
+  char key = getchar();
+       if (key == 'w') spade_call_press( 5); // map_move(map_get_first('p'),  0, -1);
+  else if (key == 's') spade_call_press( 7); // map_move(map_get_first('p'),  0,  1);
+  else if (key == 'a') spade_call_press( 6); // map_move(map_get_first('p'),  1,  0);
+  else if (key == 'd') spade_call_press( 8); // map_move(map_get_first('p'), -1,  0);
+  else if (key == 'i') spade_call_press(12); // map_move(map_get_first('p'),  0, -1);
+  else if (key == 'k') spade_call_press(14); // map_move(map_get_first('p'),  0,  1);
+  else if (key == 'j') spade_call_press(13); // map_move(map_get_first('p'),  1,  0);
+  else if (key == 'l') spade_call_press(15); // map_move(map_get_first('p'), -1,  0);
+  else return;
+
+  print_map();
+}
+
 int peak_bitmap_count = 0;
 int peak_sprite_count = 0;
 static void render_char(Color *screen, char c, Color color, int sx, int sy) {
@@ -103,6 +140,8 @@ void render_stats(Color *screen) {
   }
 }
 
+static void js_init(char *file, int file_size) {
+/*
 static void js_init(void) {
   const jerry_char_t script[] = 
 #include "engine.js.cstring"
@@ -111,6 +150,17 @@ static void js_init(void) {
 
   const jerry_length_t script_size = sizeof (script) - 1;
   js_run(script, script_size);
+  */
+
+  const jerry_char_t engine[] = 
+#include "engine.js.cstring"
+  ;
+  char *combined = calloc(sizeof(engine) - 1 + file_size, 1);
+  strcpy(combined, engine);
+  strcpy(combined + sizeof(engine) - 1, file);
+
+  const jerry_length_t combined_size = sizeof (engine) - 1 + file_size;
+  js_run(combined, combined_size);
 }
 
 void piano_jerry_song_free(void *p) {
@@ -132,17 +182,40 @@ static void write_pixel(int x, int y, Color c) {
   write_pixel_screen[y*160 + x] = c;
 }
 
-int main() {
+/* free that shit when u done */
+char *read_in_script(char *path, int *size) {
+  FILE *script = fopen(path, "r");
+  if (script == NULL) perror("couldn't open file arg");
+
+  fseek(script, 0, SEEK_END);
+  int file_size = ftell(script);
+  rewind(script);
+
+  char *chars = calloc(file_size, 1);
+  if (fread(chars, file_size, 1, script) != 1)
+    perror("couldn't read chars");
+  if (size) *size = file_size;
+  return chars;
+}
+
+int main(int argc, char *argv[])  {
   struct mfb_window *window = mfb_open_ex("spade", SPADE_WIN_SIZE_X * 2, SPADE_WIN_SIZE_Y * 2, 0);
   if (!window) return 1;
-  mfb_set_keyboard_callback(window, keyboard);
+  /* we so cool we take input from stdin now */
+  // mfb_set_keyboard_callback(window, keyboard);
 
   jerry_init (JERRY_INIT_MEM_STATS);
   init(sprite_free_jerry_object); /* god i REALLY need to namespace baseengine */
 
-  State_Render *sr = state->render;
+  /* first arg = path to js code to run */
+  {
+    int script_len = 0;
+    char *script = read_in_script(argv[1], &script_len);
+    js_init(script, script_len);
+    free(script);
+  }
+  print_map();
 
-  js_init();
   Color screen[SPADE_WIN_SIZE_X * SPADE_WIN_SIZE_Y] = {0};
 
   piano_init((PianoOpts) {
@@ -154,19 +227,24 @@ int main() {
   struct mfb_timer *lastframe = mfb_timer_create();
   mfb_timer_now(lastframe);
   do {
+    /* setInterval/Timeout impl */
     js_promises();
     spade_call_frame(1000.0f * mfb_timer_delta(lastframe));
-
     mfb_timer_now(lastframe);
 
+    /* audio */
     audio_try_push_samples();
 
+    /* render */
     memset(screen, 0, sizeof(screen));
     render_errorbuf();
     write_pixel_screen = screen;
     render(write_pixel);
     render_stats(screen);
 
+    simulated_keyboard();
+
+    /* windowing */
     uint8_t ok = STATE_OK == mfb_update_ex(window, screen, SPADE_WIN_SIZE_X, SPADE_WIN_SIZE_Y);
     if (!ok) {
       window = 0x0;
