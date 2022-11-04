@@ -369,8 +369,8 @@ WASM_EXPORT void render_set_background(char kind) {
   state->background_sprite = kind;
 }
 
-typedef struct { int x, y, width, height, scale; } Rect;
-static Color render_pixel(Rect *game, int x, int y) {
+typedef struct { int x, y, width, height, scale; } be_Rect;
+static Color render_pixel(be_Rect *game, int x, int y) {
   int cx = x / 8;
   int cy = y / 8;
   char c = state->text_char[cy][cx];
@@ -381,6 +381,8 @@ static Color render_pixel(Rect *game, int x, int y) {
     if ((bits >> (7-px)) & 1)
       return state->text_color[cy][cx];
   }
+
+  if (game->scale == 0) return color16(0, 0, 0);
 
   x = (x - game->x) / game->scale;
   y = (y - game->y) / game->scale;
@@ -419,9 +421,9 @@ static Color render_pixel(Rect *game, int x, int y) {
   }
 }
 
-static void render_calc_bounds(Rect *rect) {
+static void render_calc_bounds(be_Rect *rect) {
   if (!(state->width && state->height)) {
-    *rect = (Rect){0};
+    *rect = (be_Rect){0};
     return;
   }
 
@@ -446,7 +448,7 @@ static void render_calc_bounds(Rect *rect) {
 }
 
 static void render(void (*write_pixel)(int x, int y, Color c)) {
-  Rect rect = {0};
+  be_Rect rect = {0};
   render_calc_bounds(&rect);
 
   for (int x = 0; x < 160; x++)

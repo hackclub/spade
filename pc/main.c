@@ -34,22 +34,7 @@ static void module_native_init(jerry_value_t exports);
 #define SPADE_WIN_SIZE_Y (SCREEN_SIZE_Y + 3*8)
 #define SPADE_WIN_SCALE (2)
 
-static void keyboard(struct mfb_window *window, mfb_key key, mfb_key_mod mod, bool isPressed) {
-  (void) window;
-  if (!isPressed) return;
-
-  if (key == KB_KEY_ESCAPE) mfb_close(window);
-
-  if (key == KB_KEY_W) spade_call_press( 5); // map_move(map_get_first('p'),  0, -1);
-  if (key == KB_KEY_S) spade_call_press( 7); // map_move(map_get_first('p'),  0,  1);
-  if (key == KB_KEY_A) spade_call_press( 6); // map_move(map_get_first('p'),  1,  0);
-  if (key == KB_KEY_D) spade_call_press( 8); // map_move(map_get_first('p'), -1,  0);
-  if (key == KB_KEY_I) spade_call_press(12); // map_move(map_get_first('p'),  0, -1);
-  if (key == KB_KEY_K) spade_call_press(14); // map_move(map_get_first('p'),  0,  1);
-  if (key == KB_KEY_J) spade_call_press(13); // map_move(map_get_first('p'),  1,  0);
-  if (key == KB_KEY_L) spade_call_press(15); // map_move(map_get_first('p'), -1,  0);
-}
-
+#ifdef SPADE_AUTOMATED
 static void print_map(void) {
   /* +1 is for newlines */
   int mapstr_len = (state->width+1) * state->height;
@@ -86,6 +71,23 @@ static void simulated_keyboard(void) {
 
   print_map();
 }
+#else
+static void keyboard(struct mfb_window *window, mfb_key key, mfb_key_mod mod, bool isPressed) {
+  (void) window;
+  if (!isPressed) return;
+
+  if (key == KB_KEY_ESCAPE) mfb_close(window);
+
+  if (key == KB_KEY_W) spade_call_press( 5); // map_move(map_get_first('p'),  0, -1);
+  if (key == KB_KEY_S) spade_call_press( 7); // map_move(map_get_first('p'),  0,  1);
+  if (key == KB_KEY_A) spade_call_press( 6); // map_move(map_get_first('p'),  1,  0);
+  if (key == KB_KEY_D) spade_call_press( 8); // map_move(map_get_first('p'), -1,  0);
+  if (key == KB_KEY_I) spade_call_press(12); // map_move(map_get_first('p'),  0, -1);
+  if (key == KB_KEY_K) spade_call_press(14); // map_move(map_get_first('p'),  0,  1);
+  if (key == KB_KEY_J) spade_call_press(13); // map_move(map_get_first('p'),  1,  0);
+  if (key == KB_KEY_L) spade_call_press(15); // map_move(map_get_first('p'), -1,  0);
+}
+#endif
 
 int peak_bitmap_count = 0;
 int peak_sprite_count = 0;
@@ -140,17 +142,8 @@ void render_stats(Color *screen) {
   }
 }
 
+#ifdef SPADE_AUTOMATED
 static void js_init(char *file, int file_size) {
-/*
-static void js_init(void) {
-  const jerry_char_t script[] = 
-#include "engine.js.cstring"
-#include "game.js.cstring"
-  ;
-
-  const jerry_length_t script_size = sizeof (script) - 1;
-  js_run(script, script_size);
-  */
 
   const jerry_char_t engine[] = 
 #include "engine.js.cstring"
@@ -162,6 +155,17 @@ static void js_init(void) {
   const jerry_length_t combined_size = sizeof (engine) - 1 + file_size;
   js_run(combined, combined_size);
 }
+#else
+static void js_init(void) {
+  const jerry_char_t script[] = 
+#include "engine.js.cstring"
+#include "game.js.cstring"
+  ;
+
+  const jerry_length_t script_size = sizeof (script) - 1;
+  js_run(script, script_size);
+}
+#endif
 
 void piano_jerry_song_free(void *p) {
   /* it's straight up a jerry_value_t, not even a pointer to one */
@@ -201,13 +205,12 @@ char *read_in_script(char *path, int *size) {
 int main(int argc, char *argv[])  {
   struct mfb_window *window = mfb_open_ex("spade", SPADE_WIN_SIZE_X * 2, SPADE_WIN_SIZE_Y * 2, 0);
   if (!window) return 1;
-  /* we so cool we take input from stdin now */
-  // mfb_set_keyboard_callback(window, keyboard);
 
   jerry_init (JERRY_INIT_MEM_STATS);
   init(sprite_free_jerry_object); /* god i REALLY need to namespace baseengine */
 
   /* first arg = path to js code to run */
+#ifdef SPADE_AUTOMATED
   {
     int script_len = 0;
     char *script = read_in_script(argv[1], &script_len);
@@ -215,6 +218,11 @@ int main(int argc, char *argv[])  {
     free(script);
   }
   print_map();
+  /* we so cool we take input from stdin now */
+#else
+  mfb_set_keyboard_callback(window, keyboard);
+  js_init();
+#endif
 
   Color screen[SPADE_WIN_SIZE_X * SPADE_WIN_SIZE_Y] = {0};
 
@@ -242,7 +250,9 @@ int main(int argc, char *argv[])  {
     render(write_pixel);
     render_stats(screen);
 
+#ifdef SPADE_AUTOMATED
     simulated_keyboard();
+#endif
 
     /* windowing */
     uint8_t ok = STATE_OK == mfb_update_ex(window, screen, SPADE_WIN_SIZE_X, SPADE_WIN_SIZE_Y);
