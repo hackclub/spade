@@ -561,6 +561,7 @@ WASM_EXPORT void map_set(char *str) {
       default: tx++;           break;
     }
   } while (*str_dup++);
+  int old_map_size = state->width * state->height * sizeof(Sprite *);
   state->width = tx;
   state->height = ty+1;
   dbg("parsed, found dims");
@@ -569,8 +570,7 @@ WASM_EXPORT void map_set(char *str) {
 
   /* free stuff so we can create new ones */
   if (state->map != NULL)
-    jerry_heap_free(state->map,
-                    state->width * state->height * sizeof(Sprite*));
+    jerry_heap_free(state->map, old_map_size);
   for (int i = 0; i < state->sprite_pool_size; i++)
     map_free(state->sprite_pool + i);
   dbg("freed some sprites, maybe a map");
