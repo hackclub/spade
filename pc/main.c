@@ -4,6 +4,13 @@
 #include <stdlib.h>
 #include <stdint.h>
 
+#define SPADE_AUTOMATED
+
+#ifdef SPADE_AUTOMATED
+  #define puts(...) ;
+  #define printf(...) ;
+#endif
+
 #include "audio.h"
 
 #if 1
@@ -36,23 +43,64 @@ static void module_native_init(jerry_value_t exports);
 
 #ifdef SPADE_AUTOMATED
 static void print_map(void) {
+  /* find max on Z axis */
+  int z_size = 0;
+  {
+    for (int x = 0; x < state->width; x++)
+      for (int y = 0; y < state->height; y++) {
+        Sprite *s = get_sprite(state->map[(y * state->width) + x]);
+        int sprite_stack_len = 0;
+        while (s) {
+          sprite_stack_len++;
+          s = get_sprite(s->next);
+        }
+
+        if (sprite_stack_len > z_size)
+          z_size = sprite_stack_len;
+      }
+  }
+
+  const int stride = z_size*(state->width+1);
+
   /* +1 is for newlines */
-  int mapstr_len = (state->width+1) * state->height;
+  int mapstr_len = stride * state->height;
   char *mapstr = malloc(1 + mapstr_len);
   mapstr[mapstr_len] = 0;
   memset(mapstr, '.', mapstr_len);
 
   /* insert newlines */
   int w = state->width, h = state->height;
-  for (int y = 0; y < h; y++) mapstr[y*(w + 1) + w] = '\n';
-
-  MapIter m = {0};
-  while (map_get_grid(&m)) {
-    int i = (state->width+1)*m.sprite->y + m.sprite->x;
-    mapstr[i] = m.sprite->kind;
+  for (int y = 0; y < h; y++) {
+    mapstr[(y+1)*stride - 1] = '\n';
+    for (int z = 1; z < z_size; z++)
+      mapstr[y*stride + z*(state->width+1) - 1] = '|';
   }
 
+  for (int z = 0; z < z_size; z++) {
+    for (int x = 0; x < state->width; x++)
+      for (int y = 0; y < state->height; y++) {
+        int str_i = stride*y + (z*(state->width+1)) + x;
+        int map_i = (state->width+0)*y + x;
+        Sprite *s = get_sprite(state->map[map_i]);
+
+        int sprite_z = 0;
+        while (s) sprite_z++, s = get_sprite(s->next);
+
+        s = get_sprite(state->map[map_i]);
+        while(s) {
+          sprite_z--;
+          if (sprite_z == z) {
+            mapstr[str_i] = s->kind;
+            break;
+          }
+          s = get_sprite(s->next);
+        }
+      }
+  }
+
+#undef puts
   puts(mapstr);
+#define puts(...) ;
   free(mapstr);
   fflush(stdout);
 }
@@ -189,7 +237,7 @@ static void write_pixel(int x, int y, Color c) {
 /* free that shit when u done */
 char *read_in_script(char *path, int *size) {
   FILE *script = fopen(path, "r");
-  if (script == NULL) perror("couldn't open file arg");
+  if (script == NULL) perror("couldn't open file arg"), abort();
 
   fseek(script, 0, SEEK_END);
   int file_size = ftell(script);
@@ -197,7 +245,7 @@ char *read_in_script(char *path, int *size) {
 
   char *chars = calloc(file_size, 1);
   if (fread(chars, file_size, 1, script) != 1)
-    perror("couldn't read chars");
+    perror("couldn't read chars"), abort();
   if (size) *size = file_size;
   return chars;
 }

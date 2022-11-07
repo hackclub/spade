@@ -1,3 +1,10 @@
+let jsr = 0x5EED;
+Math.random = () => {
+  jsr^=(jsr<<17);
+  jsr^=(jsr>>13);
+  jsr^=(jsr<<5);
+  return (jsr>>>0)/4294967295;
+};
 let setTimeout, setInterval, clearInterval, clearTimeout;
 const {
   /* sprite interactions */ setSolids, setPushables,

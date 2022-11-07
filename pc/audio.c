@@ -2,6 +2,11 @@
 #include <AudioUnit/AudioUnit.h>
 #include <pthread.h>
 
+#ifdef SPADE_AUTOMATED
+  #define puts(...) ;
+  #define printf(...) ;
+#endif
+
 #include "audio.h"
 
 static  int audio_hw_init   (void);
