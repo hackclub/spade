@@ -4,7 +4,7 @@
 #include <stdlib.h>
 #include <stdint.h>
 
-#define SPADE_AUTOMATED
+// #define SPADE_AUTOMATED
 
 #ifdef SPADE_AUTOMATED
   #define puts(...) ;
@@ -190,9 +190,7 @@ void render_stats(Color *screen) {
   }
 }
 
-#ifdef SPADE_AUTOMATED
 static void js_init(char *file, int file_size) {
-
   const jerry_char_t engine[] = 
 #include "engine.js.cstring"
   ;
@@ -203,17 +201,6 @@ static void js_init(char *file, int file_size) {
   const jerry_length_t combined_size = sizeof (engine) - 1 + file_size;
   js_run(combined, combined_size);
 }
-#else
-static void js_init(void) {
-  const jerry_char_t script[] = 
-#include "engine.js.cstring"
-#include "game.js.cstring"
-  ;
-
-  const jerry_length_t script_size = sizeof (script) - 1;
-  js_run(script, script_size);
-}
-#endif
 
 void piano_jerry_song_free(void *p) {
   /* it's straight up a jerry_value_t, not even a pointer to one */
@@ -258,18 +245,17 @@ int main(int argc, char *argv[])  {
   init(sprite_free_jerry_object); /* god i REALLY need to namespace baseengine */
 
   /* first arg = path to js code to run */
-#ifdef SPADE_AUTOMATED
   {
     int script_len = 0;
     char *script = read_in_script(argv[1], &script_len);
     js_init(script, script_len);
     free(script);
   }
+#ifdef SPADE_AUTOMATED
   print_map();
   /* we so cool we take input from stdin now */
 #else
   mfb_set_keyboard_callback(window, keyboard);
-  js_init();
 #endif
 
   Color screen[SPADE_WIN_SIZE_X * SPADE_WIN_SIZE_Y] = {0};
