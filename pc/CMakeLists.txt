@@ -1,5 +1,7 @@
 target_link_libraries(spade -fno-omit-frame-pointer -fsanitize=undefined)
 
+add_definitions(-DSPADE_AUDIO)
+
 add_library(Audio pc/audio.c)
 find_library(COREAUDIO_LIBRARY NAMES CoreAudio)
 find_library(AUDIOUNIT_LIBRARY NAMES AudioUnit)

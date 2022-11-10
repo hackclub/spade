@@ -714,6 +714,9 @@ WASM_EXPORT void map_remove(Sprite *s) {
 
 /* removes all of the sprites at a given location */
 WASM_EXPORT void map_drill(int x, int y) {
+  if (x < 0 || x >= state->width ) return;
+  if (y < 0 || y >= state->height) return;
+
   Sprite *top = get_sprite(state->map[x + y * state->width]);
   for (; top; top = get_sprite(top->next)) {
     map_free(top);

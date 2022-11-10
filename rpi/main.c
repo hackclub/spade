@@ -19,7 +19,9 @@
 #include "pico/multicore.h"
 #include "jerry_mem.h"
 
+#ifdef SPADE_AUDIO
 #include "audio.h"
+#endif
 #include "ST7735_TFT.h"
 #include "upload.h"
 
@@ -123,6 +125,7 @@ static int load_new_scripts(void) {
   return upl_stdin_read();
 }
 
+#ifdef SPADE_AUDIO
 void piano_jerry_song_free(void *p) {
   /* it's straight up a jerry_value_t, not even a pointer to one */
   jerry_value_t jvt = (jerry_value_t)p;
@@ -136,6 +139,7 @@ int piano_jerry_song_chars(void *p, char *buf, int buf_len) {
   int read = jerry_string_to_char_buffer(jvt, (jerry_char_t *)buf, (jerry_size_t) buf_len);
   return read;
 }
+#endif
 
 static void write_pixel(int x, int y, Color c) {
   (void *)x;
@@ -216,16 +220,19 @@ int main() {
   /* init js */
   js_run(save_read(), strlen(save_read()));
 
+#ifdef SPADE_AUDIO
   piano_init((PianoOpts) {
     .song_free = piano_jerry_song_free,
     .song_chars = piano_jerry_song_chars,
   });
   audio_init();
+#endif
 
   absolute_time_t last = get_absolute_time();
   dbg("okay launching game loop");
   while(1) {
     /* input handling */
+    puts("please tell me it's not the fifo");
     while (multicore_fifo_rvalid())
       spade_call_press(multicore_fifo_pop_blocking());
 
@@ -233,15 +240,22 @@ int main() {
     absolute_time_t now = get_absolute_time();
     int elapsed = us_to_ms(absolute_time_diff_us(last, now));
     last = now;
+    puts("frame?");
     spade_call_frame(elapsed);
+
+    puts("promises?");
     js_promises();
 
+#if SPADE_AUDIO
     audio_try_push_samples();
+#endif
 
     /* upload new scripts */
+    puts("not load new scripts surely?");
     if (load_new_scripts()) break;
 
     /* render */
+    puts("uhh rendering? lol");
     render_errorbuf();
     st7735_fill_start();
       render(write_pixel);

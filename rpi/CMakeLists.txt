@@ -1,5 +1,5 @@
 pico_sdk_init()
-add_definitions(-DSPADE_EMBEDDED)
+add_definitions(-DSPADE_EMBEDDED -DSPADE_AUDIO)
 
 add_library(Audio rpi/audio.c)
 target_compile_definitions(Audio PRIVATE

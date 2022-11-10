@@ -93,6 +93,7 @@ JERRYXX_FUN(native_frame_cb_fn) {
   return jerry_create_undefined(); 
 }
 
+#ifdef SPADE_AUDIO
 JERRYXX_FUN(native_piano_queue_song_fn) {
   jerry_value_t song_str = jerry_acquire_value(JERRYXX_GET_ARG(0));
   piano_queue_song(
@@ -101,7 +102,6 @@ JERRYXX_FUN(native_piano_queue_song_fn) {
   );
   return jerry_create_undefined();
 }
-
 JERRYXX_FUN(native_piano_unqueue_song_fn) {
   piano_unqueue_song((void *)JERRYXX_GET_ARG(0));
   return jerry_create_undefined();
@@ -110,6 +110,12 @@ JERRYXX_FUN(native_piano_unqueue_song_fn) {
 JERRYXX_FUN(native_piano_is_song_queued_fn) {
   return jerry_create_boolean(piano_is_song_queued((void *)JERRYXX_GET_ARG(0)));
 }
+
+#else
+JERRYXX_FUN(native_piano_queue_song_fn) { return jerry_create_undefined(); }
+JERRYXX_FUN(native_piano_unqueue_song_fn) { return jerry_create_undefined(); }
+JERRYXX_FUN(native_piano_is_song_queued_fn) { return jerry_create_boolean(0); }
+#endif
 
 JERRYXX_FUN(native_legend_clear_fn) { 
   dbg("module_native::native_legend_clear_fn");
@@ -500,6 +506,9 @@ JERRYXX_FUN(getTile) {
   int x = JERRYXX_GET_ARG_NUMBER(0);
   int y = JERRYXX_GET_ARG_NUMBER(1);
 
+  if (x < 0 || x >= state->width ) return jerry_create_array(0);
+  if (y < 0 || y >= state->height) return jerry_create_array(0);
+
   /* allocating is almost certainly more expensive than iterating through our
      lil spritestack, so we iterate through once to figure out how big of an array
      we should return */
@@ -511,11 +520,13 @@ JERRYXX_FUN(getTile) {
   i = 0;
   m = (MapIter) { .x = x, .y = y };
   while (map_get_grid(&m) && (m.sprite->x == x && m.sprite->y == y)) {
+    puts("making sprite obj");
     jerry_value_t sprite = sprite_to_jerry_object(m.sprite);
     jerry_release_value(jerry_set_property_by_index(ret, i++, sprite));
     jerry_release_value(sprite);
   }
 
+  puts("and we out");
   return ret;
 }
 
