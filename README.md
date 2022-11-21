@@ -11,9 +11,25 @@ The environment variable -DSPADE_TARGET can be passed to Cmake to specify which 
 ### initialization
 
 ```
+cd ~
 git clone https://github.com/hackclub/spade
 cd spade
 git submodule update --init --recursive
+
+mkdir -p ~/jerryscript_build
+cd jerryscript_build
+git clone https://github.com/jerryscript-project/jerryscript
+cd jerryscript
+# version 2.4.0
+git checkout 8ba0d1b6ee5a065a42f3b306771ad8e3c0d819bc
+
+cd ~/spade/
+
+cd rpi/jerry/
+./refresh.sh
+
+cp pc/jerry
+./refresh.sh
 ```
 
 ### building for RPI
