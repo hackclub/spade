@@ -11,7 +11,9 @@
   #define printf(...) ;
 #endif
 
-#include "audio.h"
+#ifdef SPADE_AUDIO
+  #include "audio.h"
+#endif
 
 #if 1
   #define dbg(...) ;
@@ -260,11 +262,13 @@ int main(int argc, char *argv[])  {
 
   Color screen[SPADE_WIN_SIZE_X * SPADE_WIN_SIZE_Y] = {0};
 
-  piano_init((PianoOpts) {
-    .song_free = piano_jerry_song_free,
-    .song_chars = piano_jerry_song_chars,
-  });
-  audio_init();
+  #ifdef SPADE_AUDIO
+    piano_init((PianoOpts) {
+      .song_free = piano_jerry_song_free,
+      .song_chars = piano_jerry_song_chars,
+    });
+    audio_init();
+  #endif
 
   struct mfb_timer *lastframe = mfb_timer_create();
   mfb_timer_now(lastframe);
@@ -275,7 +279,9 @@ int main(int argc, char *argv[])  {
     mfb_timer_now(lastframe);
 
     /* audio */
-    audio_try_push_samples();
+    #ifdef SPADE_AUDIO
+      audio_try_push_samples();
+    #endif
 
     /* render */
     memset(screen, 0, sizeof(screen));
