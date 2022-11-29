@@ -1,6 +1,6 @@
 target_link_libraries(spade -fno-omit-frame-pointer -fsanitize=undefined)
 
-if (true)
+if (APPLE)
   add_definitions(-DSPADE_AUDIO)
 
   add_library(Audio pc/audio.c)
@@ -11,6 +11,7 @@ if (true)
   add_subdirectory(pc/deps/minifb)
   target_link_libraries(spade Audio minifb)
 else()
+  message(WARNING "Spade audio is only supported on macOS, audio will be muted")
   add_subdirectory(pc/deps/minifb)
   target_link_libraries(spade minifb)
 endif()
