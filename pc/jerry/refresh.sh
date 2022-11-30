@@ -5,7 +5,7 @@ rm -rf example-*
 
 python3 jerryscript/tools/build.py \
   --builddir=$(pwd)/example_build \
-  --cmake-param="-DCMAKE_INSTALL_PREFIX=$(pwd)/example_install/" \
+  --cmake-param="-DCMAKE_INSTALL_PREFIX=$(pwd)/example_install/ -G 'Unix Makefiles'" \
   --mem-heap=350 \
   --debug \
   --clean \
