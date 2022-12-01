@@ -51,8 +51,8 @@ For compiling on both PC and Pico you'll need to convert engine.js to a .cstring
 
 If you installed entr, just run `./jsdev.sh`. Otherwise:
 
-- (PC and Pico) engine.js: `./tools/cstringify.py engine.js > engine.js`
-- (PC only) game.js: `./tools/cstringify.py game.js > game.js`
+- (PC and Pico) engine.js: `./tools/cstringify.py engine.js > engine.js.cstring`
+- (PC only) game.js: `./tools/cstringify.py game.js > game.js.cstring`
 
 ### Pico Build
 
