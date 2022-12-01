@@ -17,21 +17,33 @@ Prerequisites:
 - A C build environment, preferably Clang. on Windows, GC won't work and you must use Clang. make sure CMake and Make are both working.
 - *Optional:* entr installed. Only needed if you want to use jsdev.sh.
 
-Set up your build environment. All folders need to be in your home directory, although they can be linked if you prefer. Run:
+Set up your build environment. All folders need to be in your home directory, although they can be linked if you prefer.
+
+Clone Spade:
 
 ```sh
 cd ~
 git clone https://github.com/hackclub/spade.git
 cd spade
 git submodule update --init --recursive
+```
 
+Install JerryScript:
+
+```sh
 mkdir ~/jerryscript_build
 cd ~/jerryscript_build
 git clone https://github.com/jerryscript-project/jerryscript.git
 cd jerryscript
-# version 2.4.0
-git checkout 8ba0d1b6ee5a065a42f3b306771ad8e3c0d819bc
+git checkout 8ba0d1b6ee5a065a42f3b306771ad8e3c0d819bc # version 2.4.0
 
+cd ~/spade
+cd ./pc/jerry/refresh.sh
+```
+
+Download the Pico SDK:
+
+```sh
 mkdir ~/raspberrypi
 cd ~/raspberrypi
 git clone https://github.com/raspberrypi/pico-sdk.git
@@ -40,9 +52,6 @@ cd pico-sdk
 git submodule update --init
 cd ../pico-extras
 git submodule update --init
-
-cd ~/spade
-cd ./pc/jerry/refresh.sh
 ```
 
 ### CStrings: engine.js and game.js
