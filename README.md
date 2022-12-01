@@ -8,44 +8,77 @@ However, debugging is hard when compiling directly to arm-eabi-none, so the engi
 
 The environment variable -DSPADE_TARGET can be passed to Cmake to specify which version you would like to build, one you can run on your PC, or one you can run on your Sprig hardware.
 
-### initialization
+## Building
 
-```
+Prerequisites:
+
+- A working Python 3 environment.
+- The ability to run Bash scripts.
+- A C build environment, preferably Clang. on Windows, GC won't work and you must use Clang. make sure CMake and Make are both working.
+- *Optional:* entr installed. Only needed if you want to use jsdev.sh.
+
+Set up your build environment. All folders need to be in your home directory, although they can be linked if you prefer. Run:
+
+```sh
 cd ~
-git clone https://github.com/hackclub/spade
+git clone https://github.com/hackclub/spade.git
 cd spade
 git submodule update --init --recursive
 
-mkdir -p ~/jerryscript_build
-cd jerryscript_build
-git clone https://github.com/jerryscript-project/jerryscript
+mkdir ~/jerryscript_build
+cd ~/jerryscript_build
+git clone https://github.com/jerryscript-project/jerryscript.git
 cd jerryscript
 # version 2.4.0
 git checkout 8ba0d1b6ee5a065a42f3b306771ad8e3c0d819bc
 
-cd ~/spade/
+mkdir ~/raspberrypi
+cd ~/raspberrypi
+git clone https://github.com/raspberrypi/pico-sdk.git
+git clone https://github.com/raspberrypi/pico-extras.git
+cd pico-sdk
+git submodule update --init
+cd ../pico-extras
+git submodule update --init
 
-cd rpi/jerry/
-./refresh.sh
-
-cp pc/jerry
-./refresh.sh
+cd ~/spade
+cd ./pc/jerry/refresh.sh
 ```
 
-### building for RPI
-```
-mkdir rpi_build
+### CStrings: engine.js and game.js
+
+For compiling on both PC and Pico you'll need to convert engine.js to a .cstring file. You'll need to do so for game.js too when targeting PC.
+
+If you installed entr, just run `./jsdev.sh`. Otherwise:
+
+- (PC and Pico) engine.js: `./tools/cstringify.py engine.js > engine.js`
+- (PC only) game.js: `./tools/cstringify.py game.js > game.js`
+
+### Pico Build
+
+```sh
+cmake --preset=rpi
 cd rpi_build
-cmake .. -DSPADE_TARGET=rpi
 make
-cp spade.uf2 /Volumes/RPI-RP2
 ```
 
-### building for x86 (tested with mac)
-```
-mkdir pc_build
+A UF2 file will be outputted to `spade.uf2`. On macOS, with a Pico plugged in and in BOOTSEL mode, you can transfer from the CLI with `
+cp spade.uf2 /Volumes/RPI-RP2`.
+
+### PC Build
+
+```sh
+cmake --preset=pc
 cd pc_build
-cmake .. -DSPADE_TARGET=pc
 make
 ./spade
+```
+
+The audio emulator is written for CoreAudio and audio will be muted on non-macOS systems.
+
+If you get an error about a missing Pico SDK, run the following and try again:
+
+```sh
+export PICO_SDK_PATH=~/raspberrypi/pico-sdk
+export PICO_EXTRAS_PATH=~/raspberrypi/pico-extras
 ```
