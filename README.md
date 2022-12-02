@@ -38,7 +38,7 @@ cd jerryscript
 git checkout 8ba0d1b6ee5a065a42f3b306771ad8e3c0d819bc # version 2.4.0
 
 cd ~/spade
-cd ./pc/jerry/refresh.sh
+./pc/jerry/refresh.sh
 ```
 
 Download the Pico SDK:
