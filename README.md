@@ -54,14 +54,13 @@ cd ../pico-extras
 git submodule update --init
 ```
 
-### CStrings: engine.js and game.js
+### Engine CStrings
 
-For compiling on both PC and Pico you'll need to convert engine.js to a .cstring file. You'll need to do so for game.js too when targeting PC.
+For compiling on both PC and Pico you'll need to convert engine.js to a .cstring file.
 
-If you installed entr, just run `./jsdev.sh`. Otherwise:
+If you installed entr, just run `./jsdev.sh` to update the file every time you change it.
 
-- (PC and Pico) engine.js: `./tools/cstringify.py engine.js > engine.js.cstring`
-- (PC only) game.js: `./tools/cstringify.py game.js > game.js.cstring`
+Otherwise: `./tools/cstringify.py engine.js > engine.js.cstring`
 
 ### Pico Build
 
@@ -80,7 +79,7 @@ cp spade.uf2 /Volumes/RPI-RP2`.
 cmake --preset=pc
 cd pc_build
 make
-./spade
+./spade ../game.js
 ```
 
 The audio emulator is written for CoreAudio and audio will be muted on non-macOS systems.
