@@ -12,6 +12,7 @@
 #endif
 
 #include "pico/stdlib.h"
+#include "hardware/pwm.h"
 #include "hardware/spi.h"
 #include "hardware/timer.h"
 #include "hardware/watchdog.h"
@@ -110,6 +111,22 @@ static void button_poll(void) {
   }
 }
 
+static void power_lights() {
+  // left white light
+  const pin_num_0 = 28;
+  gpio_set_function(pin_num_0, GPIO_FUNC_PWM);
+  uint slice_num_0 = pwm_gpio_to_slice_num(pin_num_0);
+  pwm_set_enabled(slice_num_0, true);
+  pwm_set_gpio_level(pin_num_0, 65535/8);
+
+  // right blue light
+  // const pin_num_1 = 4;
+  // gpio_set_function(pin_num_1, GPIO_FUNC_PWM);
+  // uint slice_num_1 = pwm_gpio_to_slice_num(pin_num_1);
+  // pwm_set_enabled(slice_num_1, true);
+  // pwm_set_gpio_level(pin_num_1, 65535/4);
+}
+
 static void core1_entry(void) {
   button_init();
 
@@ -148,6 +165,8 @@ static void write_pixel(int x, int y, Color c) {
 }
 
 int main() {
+  power_lights();
+
   stdio_init_all();
 
   st7735_init();
