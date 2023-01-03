@@ -126,7 +126,13 @@ static void keyboard(struct mfb_window *window, mfb_key key, mfb_key_mod mod, bo
   (void) window;
   if (!isPressed) return;
 
-  if (key == KB_KEY_ESCAPE) mfb_close(window);
+  if (key == KB_KEY_ESCAPE
+#ifdef __APPLE__
+      || (key == KB_KEY_Q && (mod & KB_MOD_SUPER) != 0)
+#endif
+     ) {
+    mfb_close(window);
+  }
 
   if (key == KB_KEY_W) spade_call_press( 5); // map_move(map_get_first('p'),  0, -1);
   if (key == KB_KEY_S) spade_call_press( 7); // map_move(map_get_first('p'),  0,  1);
