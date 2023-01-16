@@ -23,6 +23,13 @@ static void js_run(const jerry_char_t *script, jerry_length_t script_size) {
       jerry_release_value(jerry_set_property(global_object, prop_console, console_obj));
       jerry_release_value (prop_console);
 
+      // Seed the RNG
+      jerry_value_t jsr_value = jerry_create_number(jerry_port_get_current_time());
+      jerry_value_t prop_jsr = jerry_create_string ((const jerry_char_t *) "jsr");
+      jerry_release_value(jerry_set_property(global_object, prop_jsr, jsr_value));
+      jerry_release_value (prop_jsr);
+      jerry_release_value (jsr_value);
+
       /* Release all jerry_value_t-s */
       jerry_release_value (console_obj);
     }
