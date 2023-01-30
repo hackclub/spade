@@ -249,6 +249,10 @@ int main(int argc, char *argv[])  {
   struct mfb_window *window = mfb_open_ex("spade", SPADE_WIN_SIZE_X * 2, SPADE_WIN_SIZE_Y * 2, 0);
   if (!window) return 1;
 
+  /* seed the random number generator */
+  union { double d; unsigned u; } now = { .d = jerry_port_get_current_time() };
+  srand (now.u);
+  
   jerry_init (JERRY_INIT_MEM_STATS);
   init(sprite_free_jerry_object); /* god i REALLY need to namespace baseengine */
 

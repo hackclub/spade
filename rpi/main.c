@@ -16,6 +16,7 @@
 #include "hardware/spi.h"
 #include "hardware/timer.h"
 #include "hardware/watchdog.h"
+#include "hardware/adc.h"
 #include "pico/util/queue.h"
 #include "pico/multicore.h"
 #include "jerry_mem.h"
@@ -135,7 +136,23 @@ static void core1_entry(void) {
   }
 }
 
-static void game_init(void) {
+static void rng_init(void) {
+  adc_init();
+  uint32_t seed = 0;
+
+  for (int i = 0; i < 4; i++) {
+    adc_select_input(4);
+    sleep_ms(1);
+    seed ^= adc_read();
+  }
+
+  adc_set_temp_sensor_enabled(true);
+  adc_select_input(4);
+  sleep_ms(1);
+  seed ^= adc_read();
+  adc_set_temp_sensor_enabled(false);
+
+  srand(seed);
 }
 
 static int load_new_scripts(void) {
@@ -166,10 +183,9 @@ static void write_pixel(int x, int y, Color c) {
 
 int main() {
   power_lights();
-
   stdio_init_all();
-
   st7735_init();
+  rng_init();
 
   jerry_init (JERRY_INIT_MEM_STATS);
   init(sprite_free_jerry_object); /* gosh i should namespace base engine */
