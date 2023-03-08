@@ -257,10 +257,11 @@ static void legend_doodles_realloc(int size) {
 }
 
 WASM_EXPORT void text_add(char *str, char palette_index, int x, int y) {
+  int x_initial = x;
   for (; *str; str++) {
     if (*str == '\n' || x >= (SCREEN_SIZE_X / 8)) {
       y++;
-      x = 0;
+      x = x_initial;
       if (*str == '\n') continue;
     }
     if (y >= (SCREEN_SIZE_Y / 8)) break;
