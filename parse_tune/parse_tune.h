@@ -81,6 +81,8 @@ static uint8_t note_read(NoteReadState *nrs, char *char_source) {
       if (*str == ' ') { str++; continue; }
       if (*str == '+') { str++; continue; }
       if (*str ==   0) { nrs->open = 0; break; }
+      if (*str == '\n') { str++; continue; } // ignore newlines, as a newline is not a note (i think)
+      if (*str <= 'Z' && *str >= 'A') { *str ^= 32; } // convert uppercase notes from new sprig editor to lowercase
       if (*str <= 'z' && *str >= 'a') {
 
         char note[4] = {0};
