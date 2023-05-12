@@ -46,7 +46,7 @@ Download the Pico SDK:
 ```sh
 mkdir ~/raspberrypi
 cd ~/raspberrypi
-git clone https://github.com/raspberrypi/pico-sdk.git
+git clone -b 1.3.1 https://github.com/raspberrypi/pico-sdk.git
 git clone https://github.com/raspberrypi/pico-extras.git
 cd pico-sdk
 git submodule update --init
