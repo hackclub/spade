@@ -6,7 +6,7 @@ It was reimplemented in C to run on the Raspberry Pi Pico.
 
 However, debugging is hard when compiling directly to arm-eabi-none, so the engine can also be compiled to x86, in which case it renders to a minifb window.
 
-The environment variable -DSPADE_TARGET can be passed to Cmake to specify which version you would like to build, one you can run on your PC, or one you can run on your Sprig hardware.
+The environment variable -DSPADE_TARGET can be passed to CMake to specify which version you would like to build, one you can run on your PC, or one you can run on your Sprig hardware.
 
 ## Building
 
@@ -15,7 +15,7 @@ Prerequisites:
 - A working Python 3 environment.
 - The ability to run Bash scripts.
 - A C build environment, preferably Clang. on Windows, GC won't work and you must use Clang. make sure CMake and Make are both working.
-- *Optional:* entr installed. Only needed if you want to use jsdev.sh.
+- Entr and uglifyjs installed to use jsdev.sh.
 
 Set up your build environment. All folders need to be in your home directory, although they can be linked if you prefer.
 
@@ -58,9 +58,7 @@ git submodule update --init
 
 For compiling on both PC and Pico you'll need to convert engine.js to a .cstring file.
 
-If you installed entr, just run `./jsdev.sh` to update the file every time you change it.
-
-Otherwise: `./tools/cstringify.py engine.js > engine.js.cstring`
+Run `./jsdev.sh` to minify and update the engine. Keep it running to auto-update.
 
 ### Pico Build
 
@@ -79,7 +77,7 @@ cp spade.uf2 /Volumes/RPI-RP2`.
 cmake --preset=pc
 cd pc_build
 make
-./spade ../game.js
+./spade ../game.min.js
 ```
 
 The audio emulator is written for CoreAudio and audio will be muted on non-macOS systems.
