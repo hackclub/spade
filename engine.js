@@ -120,41 +120,43 @@ native.press_cb(pin => {
 });
 
 {
-  const timers = [];
+  const timers = {};
   let id = 0;
-  setTimeout  = (fn, ms=10) => (timers.push({ fn, ms, id }), id++);
-  setInterval = (fn, ms=10) => (timers.push({ fn, ms, id, restartAt: ms }), id++);
+  let firstClearId = -1;
+  setTimeout  = (fn, ms=10) => (timers[id] = { fn, ms }, id++);
+  setInterval = (fn, ms=10) => (timers[id] = { fn, ms, restartAt: ms }, id++);
   clearTimeout = clearInterval = id => {
-    const index = timers.findIndex(t => t.id == id);
-    if (index !== -1) timers.splice(index, 1);
+    delete timers[id]
+    if (id === firstClearId + 1) firstClearId++;
   };
+
   native.frame_cb(dt => {
-    const errors = [];
+    /* we'll never need to throw more than one error -ced */
+    let errorForLater;
 
-    for (const tim of [...timers]) {
-      if (!timers.includes(tim)) continue; /* just in case :) */
-
+    for (let i = firstClearId + 1; i < id; i++) {
+      const tim = timers[i];
       if (tim.ms <= 0) {
         /* trigger their callback */
         try {
           tim.fn();
         } catch (error) {
-          if (error) errors.push(error);
+          /* we'll never need to throw more than one error -ced */
+          if (error && !errorForLater) errorForLater = error;
         }
 
         /* restart intervals, clear timeouts */
         if (tim.restartAt !== undefined) {
           tim.ms = tim.restartAt;
         } else {
-          const index = timers.indexOf(tim)
-          if (index !== -1) timers.splice(index, 1);
+          delete timers[i];
+          if (i === firstClearId + 1) firstClearId++;
         }
       }
       tim.ms -= dt;
     }
 
-    /* we'll never need to throw more than one error -ced */
-    if (errors.length > 0) throw errors[0];
+    if (errorForLater) throw errorForLater;
   });
 }
 
