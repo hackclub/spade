@@ -1,6 +1,6 @@
 # Spade - an implementation of Sprig engine
 
-This repo is a C implementation of the engine you can find in the "engine" folder of the repo github.com/hackclub/sprig
+This repo is a C implementation of the engine you can find in the "engine" folder of the repo [hackclub/sprig](https://github.com/hackclub/sprig)
 
 It was reimplemented in C to run on the Raspberry Pi Pico.
 
