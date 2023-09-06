@@ -1,3 +1,3 @@
 static char engine_script[] = 
-  #include "engine.js.cstring"
+  #include "engine.min.js.cstring"
 ;

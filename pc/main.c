@@ -200,7 +200,7 @@ void render_stats(Color *screen) {
 
 static void js_init(char *file, int file_size) {
   const jerry_char_t engine[] = 
-#include "engine.js.cstring"
+#include "engine.min.js.cstring"
   ;
   char *combined = calloc(sizeof(engine) - 1 + file_size, 1);
   strcpy(combined, engine);

@@ -5,5 +5,8 @@ rpi_build/
 pc/jerry/include
 pc/jerry/lib
 engine.js.cstring
+engine.min.js
+engine.min.js.cstring
 game.js
 game.js.cstring
+game.min.js
