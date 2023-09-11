@@ -8,11 +8,11 @@ static struct {
 
 static void js_run(const jerry_char_t *script, jerry_length_t script_size) {
 
-  /* add shit to global scpoe */
+  // add shit to global scpoe
   {
     jerry_value_t global_object = jerry_get_global_object ();
 
-    /* add the "console" module to the JavaScript global object */
+    // add the "console" module to the JavaScript global object
     {
       jerry_value_t console_obj = jerry_create_object ();
 
@@ -23,11 +23,11 @@ static void js_run(const jerry_char_t *script, jerry_length_t script_size) {
       jerry_release_value(jerry_set_property(global_object, prop_console, console_obj));
       jerry_release_value (prop_console);
 
-      /* Release all jerry_value_t-s */
+      // Release all jerry_value_t-s
       jerry_release_value (console_obj);
     }
 
-    /* add the "native" module to the JavaScript global object */
+    // add the "native" module to the JavaScript global object
     {
       jerry_value_t native_obj = jerry_create_object ();
 
@@ -37,7 +37,7 @@ static void js_run(const jerry_char_t *script, jerry_length_t script_size) {
       jerry_release_value(jerry_set_property(global_object, prop_native, native_obj));
       jerry_release_value (prop_native);
 
-      /* Release all jerry_value_t-s */
+      // Release all jerry_value_t-s
       jerry_release_value (native_obj);
     }
 
@@ -63,7 +63,7 @@ static void js_run(const jerry_char_t *script, jerry_length_t script_size) {
   }
 
   puts("bouta run some code");
-  /* Execute the parsed source code in the Global scope */
+  // Execute the parsed source code in the Global scope
   jerry_value_t ret_value = jerry_run (parsed_code);
 
   if (jerry_value_is_error (ret_value)) {
@@ -73,13 +73,13 @@ static void js_run(const jerry_char_t *script, jerry_length_t script_size) {
     // abort();
   }
 
-  /* Returned value must be freed */
+  // Returned value must be freed
   jerry_release_value (ret_value);
 
-  /* Parsed source code must be freed */
+  // Parsed source code must be freed
   jerry_release_value (parsed_code);
 
-  /* Cleanup engine */
+  // Cleanup engine
   // jerry_cleanup ();
 }
 

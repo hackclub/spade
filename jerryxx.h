@@ -286,4 +286,4 @@ jerry_value_t jerryxx_call_method(jerry_value_t obj, char *name,
 // class inheritance
 void jerryxx_inherit(jerry_value_t super_ctor, jerry_value_t sub_ctor);
 
-#endif /* __JERRYXX_H */
+#endif // __JERRYXX_H

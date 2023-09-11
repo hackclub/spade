@@ -207,9 +207,7 @@ static void strlcat_fixed_error(char *dest, jerry_value_t loc, size_t size) {
   jerry_release_value(str);
 }
 
-/**
- * Print error with stacktrace
- */
+// Print error with stacktrace
 void jerryxx_print_error(jerry_value_t value, bool print_stacktrace) {
   memset(errorbuf, 0, sizeof(errorbuf));
   
@@ -230,7 +228,7 @@ void jerryxx_print_error(jerry_value_t value, bool print_stacktrace) {
       uint32_t length = jerry_get_array_length(backtrace_val);
       if (length > 32) {
         length = 32;
-      } /* max length: 32 */
+      } // max length: 32
       
       for (uint32_t i = 0; i < length; i++) {
         jerry_value_t item_val = jerry_get_property_by_index(backtrace_val, i);

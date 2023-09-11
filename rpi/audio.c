@@ -56,6 +56,6 @@ void audio_try_push_samples(void) {
   piano_fill_sample_buf((int16_t *)buffer->buffer->bytes, buffer->max_sample_count);
   buffer->sample_count = buffer->max_sample_count;
 
-  /* send to PIO DMA */
+  // send to PIO DMA
   give_audio_buffer(audio_bufpool, buffer);
 }

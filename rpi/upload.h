@@ -2,8 +2,8 @@
 #include "hardware/flash.h"
 static void core1_entry(void);
 
-/* rationale: half engine, half games? */
-/* NOTE: this has to be a multiple of 4096 (FLASH_SECTOR_SIZE) */
+// rationale: half engine, half games?
+// NOTE: this has to be a multiple of 4096 (FLASH_SECTOR_SIZE)
 #define FLASH_TARGET_OFFSET (800 * 1024)
 
 const uint8_t *flash_target_contents = (const uint8_t *) (XIP_BASE + FLASH_TARGET_OFFSET);
@@ -16,7 +16,7 @@ static const char *save_read(void) {
     return NULL;
   }
 
-  /* add a page to get what's after the magic */
+  // add a page to get what's after the magic
   const char *save = flash_target_contents + FLASH_PAGE_SIZE;
   return save;
 }
@@ -52,7 +52,7 @@ static int upl_stdin_read(void) {
     int c = getchar_timeout_us(timeout);
     if (c == PICO_ERROR_TIMEOUT) return 0;
 
-    timeout = 100; /* we in upload mode now */
+    timeout = 100; // we in upload mode now
 
     switch (upl_state.prog) {
       case UplProg_StartSeq: {
@@ -74,15 +74,15 @@ static int upl_stdin_read(void) {
           printf("ok reading %d chars\n", upl_state.len);
           upl_state.prog = UplProg_Body;
           upl_state.len_i = 0;
-          upl_state.page = 1; /* skip first, that's for magic */
+          upl_state.page = 1; // skip first, that's for magic
 
-          int char_len = upl_state.len + sizeof (engine_script); /* sizeof script includes the null term, we still need to remove from script */
+          int char_len = upl_state.len + sizeof (engine_script); // sizeof script includes the null term, we still need to remove from script
           upl_state.len = char_len;
-          /* one to round up, one for magic */
+          // one to round up, one for magic
           int page_len   = (char_len/FLASH_PAGE_SIZE   + 2) * FLASH_PAGE_SIZE  ;
           int sector_len = (page_len/FLASH_SECTOR_SIZE + 1) * FLASH_SECTOR_SIZE;
 
-          /* irqs on other core? */
+          // irqs on other core?
           multicore_reset_core1();
           
           uint32_t interrupts = save_and_disable_interrupts();

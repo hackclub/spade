@@ -34,7 +34,7 @@ static void fatal_error(void) { abort(); }
 #include "jerryscript.h"
 #include "jerryxx.h"
 
-/* jumbo builds out of laziness */
+// jumbo builds out of laziness
 static void module_native_init(jerry_value_t exports);
 #include "js.h"
 #include "module_native.c"
@@ -45,7 +45,7 @@ static void module_native_init(jerry_value_t exports);
 
 #ifdef SPADE_AUTOMATED
 static void print_map(void) {
-  /* find max on Z axis */
+  // find max on Z axis
   int z_size = 0;
   {
     for (int x = 0; x < state->width; x++)
@@ -64,13 +64,13 @@ static void print_map(void) {
 
   const int stride = z_size*(state->width+1);
 
-  /* +1 is for newlines */
+  // +1 is for newlines
   int mapstr_len = stride * state->height;
   char *mapstr = malloc(1 + mapstr_len);
   mapstr[mapstr_len] = 0;
   memset(mapstr, '.', mapstr_len);
 
-  /* insert newlines */
+  // insert newlines
   int w = state->width, h = state->height;
   for (int y = 0; y < h; y++) {
     mapstr[(y+1)*stride - 1] = '\n';
@@ -157,18 +157,17 @@ static void render_char(Color *screen, char c, Color color, int sx, int sy) {
   }
 }
 void render_stats(Color *screen) {
-  /*
-  +1 on mem because sprintf might write an extra null term, doesn't matter for others
-  bc they shouldn't get to filling the buffer
-
-  format with assumed max lengths:
-
-  --------------------
-  mem: 1000kB (1000kB)
-  bitmaps: 100 (100)
-  sprites: 100 (100)
-  maps: 100 (100)
-  */
+  /* +1 on mem because sprintf might write an extra null term, doesn't matter for others
+   * bc they shouldn't get to filling the buffer
+   * 
+   * format with assumed max lengths:
+   *
+   * --------------------
+   * mem: 1000kB (1000kB)
+   * bitmaps: 100 (100)
+   * sprites: 100 (100)
+   * maps: 100 (100)
+   */
   char mem[20 * 8 + 1] = "";
   char bitmaps[20 * 8] = "";
   char sprites[20 * 8] = "";
@@ -211,13 +210,13 @@ static void js_init(char *file, int file_size) {
 }
 
 void piano_jerry_song_free(void *p) {
-  /* it's straight up a jerry_value_t, not even a pointer to one */
+  // it's straight up a jerry_value_t, not even a pointer to one
   jerry_value_t jvt = (jerry_value_t)p;
 
   jerry_release_value(jvt);
 }
 int piano_jerry_song_chars(void *p, char *buf, int buf_len) {
-  /* it's straight up a jerry_value_t, not even a pointer to one */
+  // it's straight up a jerry_value_t, not even a pointer to one
   jerry_value_t jvt = (jerry_value_t)p;
 
   int read = jerry_string_to_char_buffer(jvt, (jerry_char_t *)buf, (jerry_size_t) buf_len);
@@ -229,7 +228,7 @@ static void write_pixel(int x, int y, Color c) {
   write_pixel_screen[y*160 + x] = c;
 }
 
-/* free that shit when u done */
+// free that shit when u done
 char *read_in_script(char *path, int *size) {
   FILE *script = fopen(path, "r");
   if (script == NULL) perror("couldn't open file arg"), abort();
@@ -249,14 +248,14 @@ int main(int argc, char *argv[])  {
   struct mfb_window *window = mfb_open_ex("spade", SPADE_WIN_SIZE_X * 2, SPADE_WIN_SIZE_Y * 2, 0);
   if (!window) return 1;
 
-  /* seed the random number generator */
+  // seed the random number generator
   union { double d; unsigned u; } now = { .d = jerry_port_get_current_time() };
   srand (now.u);
   
   jerry_init (JERRY_INIT_MEM_STATS);
-  init(sprite_free_jerry_object); /* god i REALLY need to namespace baseengine */
+  init(sprite_free_jerry_object); // god i REALLY need to namespace baseengine
 
-  /* first arg = path to js code to run */
+  // first arg = path to js code to run
   {
     int script_len = 0;
     char *script = read_in_script(argv[1], &script_len);
@@ -265,7 +264,7 @@ int main(int argc, char *argv[])  {
   }
 #ifdef SPADE_AUTOMATED
   print_map();
-  /* we so cool we take input from stdin now */
+  // we so cool we take input from stdin now
 #else
   mfb_set_keyboard_callback(window, keyboard);
 #endif
@@ -283,17 +282,17 @@ int main(int argc, char *argv[])  {
   struct mfb_timer *lastframe = mfb_timer_create();
   mfb_timer_now(lastframe);
   do {
-    /* setInterval/Timeout impl */
+    // setInterval/Timeout impl
     js_promises();
     spade_call_frame(1000.0f * mfb_timer_delta(lastframe));
     mfb_timer_now(lastframe);
 
-    /* audio */
+    // audio
     #ifdef SPADE_AUDIO
       audio_try_push_samples();
     #endif
 
-    /* render */
+    // render
     memset(screen, 0, sizeof(screen));
     render_errorbuf();
     write_pixel_screen = screen;
@@ -304,7 +303,7 @@ int main(int argc, char *argv[])  {
     simulated_keyboard();
 #endif
 
-    /* windowing */
+    // windowing
     uint8_t ok = STATE_OK == mfb_update_ex(window, screen, SPADE_WIN_SIZE_X, SPADE_WIN_SIZE_Y);
     if (!ok) {
       window = 0x0;

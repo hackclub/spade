@@ -50,7 +50,7 @@ typedef struct {
   int sample_duration;
 } Song;
 
-/* piano ties together our sample table, our note reader and pico's audio buffer pool */
+// piano ties together our sample table, our note reader and pico's audio buffer pool
 #define SONG_COUNT 4
 const float sound_weights[Sound_COUNT] = {
   [Sound_Sine]     = 1.00f,
@@ -84,7 +84,7 @@ int piano_queue_song(void *char_source, double times) {
 static void piano_chan_free(Song *song) {
   if (song->char_source) piano_state.opts.song_free(song->char_source);
   memset(song, 0, sizeof(Song));
-  song->active = 0; /* just to make sure >:) */
+  song->active = 0; // just to make sure >:)
 }
 
 int piano_unqueue_song(void *p) {
@@ -113,7 +113,7 @@ int piano_is_song_queued(void *p) {
 void piano_init(PianoOpts opts) {
   piano_state.opts = opts;
 
-  /* fill sample table */
+  // fill sample table
   for (int i = 0; i < TABLE_LEN; i++) {
     float t = (float)i / (float)TABLE_LEN;
     float soundf[Sound_COUNT] = {
@@ -135,11 +135,11 @@ static int32_t piano_compute_sample(Song *song) {
   if (song->samples_into_note >= song->sample_duration) {
     song->samples_into_note = 0;
 
-    /* clear out all old notes, we got new data */
+    // clear out all old notes, we got new data
     memset(&song->notes, 0, sizeof(song->notes));
     song->notes_len = 0;
 
-    /* pull the song into this buf so we can read next chord */
+    // pull the song into this buf so we can read next chord
     char char_source[2048] = {0};
     if (!piano_state.opts.song_chars(song->char_source, char_source, 2048)) {
       puts("song exceeds 2k chars, not playing");
@@ -162,7 +162,7 @@ static int32_t piano_compute_sample(Song *song) {
       if (nrs_ret->kind != NrsRetKind_None) {
         song->sample_duration = (SAMPLES_PER_SECOND / 1000) * nrs_ret->duration;
 
-        /* TODO: handle chords (multiple notes per pause) */
+        // TODO: handle chords (multiple notes per pause)
         if (nrs_ret->kind == NrsRetKind_Sound) {
           if (song->notes_len < ARR_LEN(song->notes)) {
             song->notes[song->notes_len++] = i2snote_sound(
@@ -174,7 +174,7 @@ static int32_t piano_compute_sample(Song *song) {
           }
         }
         if (nrs_ret->kind == NrsRetKind_Pause) {
-          /* chords (and pauses) always end with pauses (unless something goes *horribly* wrong) */
+          // chords (and pauses) always end with pauses (unless something goes *horribly* wrong)
           break;
         }
       }
@@ -188,7 +188,7 @@ static int32_t piano_compute_sample(Song *song) {
 
     note->pos += note->step;
 
-    /* wrap 'round */
+    // wrap 'round
     const int32_t pos_max = 0x10000 * TABLE_LEN;
     if (note->pos >= pos_max) note->pos -= pos_max;
   }
@@ -206,7 +206,7 @@ int32_t clamp(int32_t x, int32_t min, int32_t max) {
 }
 
 void piano_fill_sample_buf(int16_t *samples, int size) {
-  /* fill buffer */
+  // fill buffer
   for (int i = 0; i < size; i++) {
     int32_t sum = 0;
     int8_t sample_count = 0;

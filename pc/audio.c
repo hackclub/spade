@@ -28,7 +28,7 @@ typedef enum {
   SampleBufState_Full,
 } SampleBufState;
 typedef struct {
-  /* stops try_push from infinilooping before audiocore launches */
+  // stops try_push from infinilooping before audiocore launches
   SampleBufState state;
 
   pthread_mutex_t mutex;
@@ -40,7 +40,7 @@ static SampleBuf sample_bufs[3] = {0};
 void audio_init(void) {
   audio_hw_init();
 
-  /* locked for audio_cb */
+  // locked for audio_cb
   pthread_mutex_lock(&sample_bufs[0].mutex);
 
   audio_open(&(AURenderCallbackStruct) { .inputProc = audio_cb });
@@ -52,7 +52,7 @@ void audio_try_push_samples(void) {
     SampleBuf *sb = sample_bufs + writer;
     if (!pthread_mutex_trylock(&sb->mutex)) return;
 
-    /* stops us from infinilooping before audiocore launches */
+    // stops us from infinilooping before audiocore launches
     if (sb->state == SampleBufState_Full) {
       pthread_mutex_unlock(&sb->mutex);
       return;
@@ -75,7 +75,7 @@ static OSStatus audio_cb(
   AudioBufferList *ioData
 ) {
 
-  /* get a pointer to where our samples need to go */
+  // get a pointer to where our samples need to go
   int channel = 0;
   int16_t *buffer = (int16_t *)ioData->mBuffers[channel].mData;
 
@@ -108,7 +108,7 @@ int main(void) {
 
   audio_open(&(AURenderCallbackStruct) { .inputProc = audio_cb });
 
-  /* sleep 1s, rendering via callback happens in another thread */
+  // sleep 1s, rendering via callback happens in another thread
   usleep(1000000);
 
   audio_close();
@@ -120,7 +120,7 @@ static AudioComponent output_comp;
 static AudioComponentInstance output_instance;
 
 static int audio_hw_init(void) {
-  /* open the default audio device */
+  // open the default audio device
   output_comp = AudioComponentFindNext(NULL, &(AudioComponentDescription) {
     .componentType = kAudioUnitType_Output,
     .componentSubType = kAudioUnitSubType_DefaultOutput,
@@ -157,7 +157,7 @@ static  int audio_open(AURenderCallbackStruct *callback) {
   AudioStreamBasicDescription streamFormat = {
     .mSampleRate = SAMPLES_PER_SECOND,
     .mFormatID = kAudioFormatLinearPCM,
-    .mFormatFlags = kAudioFormatFlagIsSignedInteger, /* kAudioFormatFlagIsBigEndian ? */
+    .mFormatFlags = kAudioFormatFlagIsSignedInteger, // kAudioFormatFlagIsBigEndian ?
     .mFramesPerPacket = 1,
     .mChannelsPerFrame = CHAN,
     .mBitsPerChannel = BYTES_PER_SAMPLE * 8,
@@ -165,7 +165,7 @@ static  int audio_open(AURenderCallbackStruct *callback) {
     .mBytesPerFrame = CHAN * BYTES_PER_SAMPLE,
   };
 
-  /* pass in input format */
+  // pass in input format
   if (AudioUnitSetProperty(
     output_instance,
     kAudioUnitProperty_StreamFormat,
@@ -178,7 +178,7 @@ static  int audio_open(AURenderCallbackStruct *callback) {
     return 0;
   }
 
-  /* pass in callback */
+  // pass in callback
   if (AudioUnitSetProperty(
     output_instance,
     kAudioUnitProperty_SetRenderCallback,
@@ -191,7 +191,7 @@ static  int audio_open(AURenderCallbackStruct *callback) {
     return 0;
   }
 
-  /* start 'er up */
+  // start 'er up
   if (AudioOutputUnitStart(output_instance)) {
     printf("Unable to start audio unit.\n");
     return 0;

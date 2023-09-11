@@ -1,18 +1,17 @@
+#include <stdlib.h>
+#include <stdio.h>
+#include <ctype.h>
+#include <stdlib.h>
+#include <string.h>
+#include "jerryscript.h"
+#include "native_magic_strings.h"
+
 static struct {
   jerry_value_t x, y, dx, dy, addr, type, _x, _y, _type, push, remove, generation;
   jerry_property_descriptor_t  x_prop_desc,  y_prop_desc, type_prop_desc,
                               dx_prop_desc, dy_prop_desc;
   jerry_value_t sprite_remove;
 } props = {0};
-
-
-#include <stdlib.h>
-#include <stdio.h>
-#include <ctype.h>
-#include <stdlib.h>
-#include <string.h>
-
-#include "native_magic_strings.h"
 
 static char jerry_value_to_char(jerry_value_t val) {
   jerry_char_t tmp[2] = {0};
@@ -150,7 +149,7 @@ JERRYXX_FUN(native_map_clear_deltas_fn) {
   dbg("module_native::native_map_clear_deltas_fn");
   map_clear_deltas(); return jerry_create_undefined(); }
 
-/* lifetime: creates a jerry_value_t you need to free!!! */
+// lifetime: creates a jerry_value_t you need to free!!!
 static jerry_value_t sprite_to_jerry_addr(Sprite *s) {
   return jerry_create_number((size_t)(s - state->sprite_pool));
 }
@@ -306,12 +305,12 @@ static void props_init(void) {
   props.    remove = jerry_create_string((const jerry_char_t *)     "remove");
   props.generation = jerry_create_string((const jerry_char_t *) "generation");
 
-  /* this is why we can't fucking have nice things */
+  // this is why we can't fucking have nice things
   props.        _x = jerry_create_string((const jerry_char_t *)         "_x");
   props.        _y = jerry_create_string((const jerry_char_t *)         "_y");
   props.     _type = jerry_create_string((const jerry_char_t *)      "_type");
-  /* GAHHHHHHHHH just kill me now */
-  /* i shouldn't let this bother me so much ... */
+  // GAHHHHHHHHH just kill me now
+  // i shouldn't let this bother me so much ...
 
   props.sprite_remove = jerry_create_external_function(sprite_remove);
 
@@ -357,20 +356,20 @@ static jerry_value_t sprite_alloc_jerry_object(Sprite *s) {
 
   jerry_value_t ret = jerry_create_object();
 
-  /* store addr field on ret */
+  // store addr field on ret
   jerry_value_t addr_val = sprite_to_jerry_addr(s);
   jerry_release_value(jerry_set_property(ret, props.addr, addr_val));
   jerry_release_value(addr_val);
 
-  /* store generation field on ret */
+  // store generation field on ret
   jerry_value_t generation_val = jerry_create_number(sprite_generation(s));
   jerry_release_value(jerry_set_property(ret, props.generation, generation_val));
   jerry_release_value(generation_val);
 
-  /* add methods */
+  // add methods
   jerry_release_value(jerry_set_property(ret, props.remove, props.sprite_remove));
 
-  /* add getters, setters */
+  // add getters, setters
   jerry_release_value(jerry_define_own_property(ret, props.x, &props.x_prop_desc));
   jerry_release_value(jerry_define_own_property(ret, props.y, &props.y_prop_desc));
   jerry_release_value(jerry_define_own_property(ret, props.dx, &props.dx_prop_desc));
@@ -510,8 +509,8 @@ JERRYXX_FUN(getTile) {
   if (y < 0 || y >= state->height) return jerry_create_array(0);
 
   /* allocating is almost certainly more expensive than iterating through our
-     lil spritestack, so we iterate through once to figure out how big of an array
-     we should return */
+   * lil spritestack, so we iterate through once to figure out how big of an array
+   * we should return */
   int i = 0;
   MapIter m = { .x = x, .y = y };
   while (map_get_grid(&m) && (m.sprite->x == x && m.sprite->y == y)) i++;
@@ -544,7 +543,7 @@ JERRYXX_FUN(getAll) {
   char kind = no_arg ? 0 : jerry_value_to_char(JERRYXX_GET_ARG(0));
   int i = 0;
   
-  /* figure out how much to allocate */
+  // figure out how much to allocate
   MapIter m = {0};
   while (map_get_grid(&m))
     if (no_arg || m.sprite->kind == kind)
@@ -657,14 +656,14 @@ static void module_native_init(jerry_value_t exports) {
 
   props_init();
 
-  /* these ones actually need to be in C for perf */
+  // these ones actually need to be in C for perf
   jerryxx_set_property_function(exports, MSTR_NATIVE_setMap,    setMap);
   jerryxx_set_property_function(exports, MSTR_NATIVE_tilesWith, tilesWith);
   jerryxx_set_property_function(exports, MSTR_NATIVE_getGrid,   getGrid);
   jerryxx_set_property_function(exports, MSTR_NATIVE_getFirst,  getFirst);
   jerryxx_set_property_function(exports, MSTR_NATIVE_getAll,    getAll);
 
-  /* it was just easier to implement these in C */
+  // it was just easier to implement these in C
   jerryxx_set_property_function(exports, MSTR_NATIVE_width,         width);
   jerryxx_set_property_function(exports, MSTR_NATIVE_height,        height);
   jerryxx_set_property_function(exports, MSTR_NATIVE_setBackground, setBackground);
@@ -674,16 +673,16 @@ static void module_native_init(jerry_value_t exports) {
   jerryxx_set_property_function(exports, MSTR_NATIVE_text_add,      native_text_add_fn);
   jerryxx_set_property_function(exports, MSTR_NATIVE_text_clear,    native_text_clear_fn);
 
-  /* random background goodie */
+  // random background goodie
   jerryxx_set_property_function(exports, MSTR_NATIVE_map_clear_deltas, native_map_clear_deltas_fn);
 
-  /* it was easier to split these into multiple C functions than do the JS data shuffling in C */
+  // it was easier to split these into multiple C functions than do the JS data shuffling in C
   jerryxx_set_property_function(exports, MSTR_NATIVE_solids_push, native_solids_push_fn);
   jerryxx_set_property_function(exports, MSTR_NATIVE_solids_clear, native_solids_clear_fn);
-  /* -- */
+  
   jerryxx_set_property_function(exports, MSTR_NATIVE_push_table_set, native_push_table_set_fn);
   jerryxx_set_property_function(exports, MSTR_NATIVE_push_table_clear, native_push_table_clear_fn);
-  /* -- */
+  
   jerryxx_set_property_function(exports, MSTR_NATIVE_legend_doodle_set, native_legend_doodle_set_fn);
   jerryxx_set_property_function(exports, MSTR_NATIVE_legend_clear, native_legend_clear_fn);
   jerryxx_set_property_function(exports, MSTR_NATIVE_legend_prepare, native_legend_prepare_fn);

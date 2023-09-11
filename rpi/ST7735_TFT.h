@@ -105,7 +105,7 @@ static void spi_command(uint8_t x) {
   uint8_t data[] = { __VA_ARGS__ };                      \
   spi_write_blocking(SPI_TFT_PORT, data, sizeof(data)); }
 
-/* todo: consolidate spi_command and spi_data, use everywhere */
+// todo: consolidate spi_command and spi_data, use everywhere
 static void write_command(uint8_t cmd_){
   tft_dc_low();
   tft_cs_low();
@@ -129,7 +129,7 @@ static void st7735_fill_start() {
   spi_data(0x00, 0x00, 0x00, 0x9F);
 
   spi_command(ST7735_RAMWR);
-  tft_dc_high(); /* (no data) */
+  tft_dc_high(); // (no data)
 }
 
 static void st7735_fill_send(uint16_t pixel) {
@@ -150,23 +150,23 @@ static void st7735_reset() {
 }
 
 static void st7735_init() {
-  /* enable backlight */
+  // enable backlight
   {
     gpio_init(17);
     gpio_set_dir(17, GPIO_OUT);
     gpio_put(17, 1);
   }
 
-  /* init SPI, gpio */
+  // init SPI, gpio
   {
-    /* baud rate: */
+    // baud rate:
     spi_init(SPI_PORT, 30000000);
 
     gpio_set_function(SPI_RX, GPIO_FUNC_SPI);
     gpio_set_function(SPI_SCK,GPIO_FUNC_SPI);
     gpio_set_function(SPI_TX, GPIO_FUNC_SPI);
 
-    /* enable SPI */
+    // enable SPI
     gpio_init(SPI_TFT_CS);
     gpio_set_dir(SPI_TFT_CS, GPIO_OUT);
     gpio_put(SPI_TFT_CS, 1);                        // Chip select is active-low
@@ -184,7 +184,7 @@ static void st7735_init() {
 
   tft_dc_low();
 
-  /* read screen data sheet to understand */
+  // read screen data sheet to understand
   {
     write_command(ST7735_SWRESET);
     sleep_ms(150);
@@ -227,7 +227,7 @@ static void st7735_init() {
     write_data(0x05); 
   }
 
-  { /* initializes red version */
+  { // initializes red version
     write_command(ST7735_CASET);
     write_data(0x00); write_data(0x00);
     write_data(0x00); write_data(0x7F);

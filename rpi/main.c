@@ -35,12 +35,12 @@ char errorbuf[512] = "";
 #include "jerryscript.h"
 #include "jerryxx.h"
 
-/* jumbo builds out of laziness */
+// jumbo builds out of laziness
 static void module_native_init(jerry_value_t exports);
 #include "js.h"
 #include "module_native.c"
 
-/* permanent loop rendering errbuf */
+// permanent loop rendering errbuf
 static void write_pixel(int x, int y, Color c);
 static void fatal_error() {
   while (1) {
@@ -90,7 +90,7 @@ static void button_poll(void) {
     bs->ring_i = (bs->ring_i + 1) % HISTORY_LEN;
     button_history_write(bs, bs->ring_i, gpio_get(button_pins[i]));
 
-    /* down is true if more than half are true */
+    // down is true if more than half are true
     int down = 0;
     for (int i = 0; i < HISTORY_LEN; i++)
       down += button_history_read(bs, i);
@@ -161,13 +161,13 @@ static int load_new_scripts(void) {
 
 #ifdef SPADE_AUDIO
 void piano_jerry_song_free(void *p) {
-  /* it's straight up a jerry_value_t, not even a pointer to one */
+  // it's straight up a jerry_value_t, not even a pointer to one
   jerry_value_t jvt = (jerry_value_t)p;
 
   jerry_release_value(jvt);
 }
 int piano_jerry_song_chars(void *p, char *buf, int buf_len) {
-  /* it's straight up a jerry_value_t, not even a pointer to one */
+  // it's straight up a jerry_value_t, not even a pointer to one
   jerry_value_t jvt = (jerry_value_t)p;
 
   int read = jerry_string_to_char_buffer(jvt, (jerry_char_t *)buf, (jerry_size_t) buf_len);
@@ -188,7 +188,7 @@ int main() {
   rng_init();
 
   jerry_init (JERRY_INIT_MEM_STATS);
-  init(sprite_free_jerry_object); /* gosh i should namespace base engine */
+  init(sprite_free_jerry_object); // gosh i should namespace base engine
 
   while(!save_read()) {
     strcpy(errorbuf, "                    \n"
@@ -216,8 +216,9 @@ int main() {
 
   multicore_launch_core1(core1_entry);
 
-  /* drain keypresses */
-  /* what really needs to be done here is to have button_init
+  /* drain keypresses
+   *
+   * what really needs to be done here is to have button_init
    * record when it starts so that we can use that timestamp to
    * ignore these fake startup keypresses */
   sleep_ms(50);
@@ -249,10 +250,10 @@ int main() {
   memset(errorbuf, 0, sizeof(errorbuf));
   text_clear();
 
-  /* drain keypresses */
+  // drain keypresses 
   while (multicore_fifo_rvalid()) multicore_fifo_pop_blocking();
 
-  /* init js */
+  // init js
   js_run(save_read(), strlen(save_read()));
 
 #ifdef SPADE_AUDIO
@@ -266,12 +267,12 @@ int main() {
   absolute_time_t last = get_absolute_time();
   dbg("okay launching game loop");
   while(1) {
-    /* input handling */
+    // input handling
     puts("please tell me it's not the fifo");
     while (multicore_fifo_rvalid())
       spade_call_press(multicore_fifo_pop_blocking());
 
-    /* setTimeout/setInterval impl */
+    // setTimeout/setInterval impl
     absolute_time_t now = get_absolute_time();
     int elapsed = us_to_ms(absolute_time_diff_us(last, now));
     last = now;
@@ -285,11 +286,11 @@ int main() {
     audio_try_push_samples();
 #endif
 
-    /* upload new scripts */
+    // upload new scripts
     puts("not load new scripts surely?");
     if (load_new_scripts()) break;
 
-    /* render */
+    // render
     puts("uhh rendering? lol");
     render_errorbuf();
     st7735_fill_start();

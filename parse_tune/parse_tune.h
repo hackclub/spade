@@ -10,7 +10,7 @@ typedef struct {
   NrsRetKind kind;
   float duration;
 
-  struct { /* if NoteKind_Sound: */
+  struct { // if NoteKind_Sound:
     int freq;
     Sound sound;
   } sound;
@@ -25,31 +25,31 @@ typedef struct {
   NrsRet ret;
 
   int i;
-  // char *str; /* iterated through */
+  // char *str; // iterated through
 } NoteReadState;
 
 static uint8_t note_read(NoteReadState *nrs, char *char_source) {
   char *endptr = NULL;
   char *str = char_source + nrs->i;
 
-  /* if (*str == 0) return 0; */
+  // if (*str == 0) return 0;
 
   if (!nrs->open) {
     nrs->to_wait = strtof(str, &endptr);
     if (endptr) {
       str = endptr;
 
-      /* if there's more than just a pause, we open for notes */
+      // if there's more than just a pause, we open for notes
       if (*str == ':') {
-        str++; /* consume the colon! */
+        str++; // consume the colon!
         nrs->open = 1;
         goto THERES_MORE;
       }
 
-      /* if it's a comma and newline we eat that shit (and stay closed) */
+      // if it's a comma and newline we eat that shit (and stay closed)
       if (*str == ',') {
         str += 2;
-        goto THERES_MORE; /* where there's a comma in this spec, there's more */
+        goto THERES_MORE; // where there's a comma in this spec, there's more
       }
 
       #if 0
@@ -57,21 +57,21 @@ static uint8_t note_read(NoteReadState *nrs, char *char_source) {
       because i think ignoring the final duration is something we actually
       want to do!
       if (*str == '\0') {
-        /* this is fucked up because 1 has meant "there's more" but */
+        // this is fucked up because 1 has meant "there's more" but
         goto THERES_MORE;
       }
       #endif
 
-      /* just filter out empty lines between notes i guess */
+      // just filter out empty lines between notes i guess
       if (*str == '\n') str++;
     }
   }
   else {
-    /* go ahead and eat a comma + close, if we can */
+    // go ahead and eat a comma + close, if we can
     if (*str == ',') {
       nrs->open = 0;
 
-      /* we eat commas and newlines */
+      // we eat commas and newlines
       str += 2;
 
       goto THERES_MORE;
@@ -137,7 +137,7 @@ static uint8_t tune_parse(NoteReadState *nrs, char *char_source) {
 
   if (note_read(nrs, char_source)) {
     if (!nrs->open) {
-      /* okay, we've read a whole note, we can finish this note! ... */
+      // okay, we've read a whole note, we can finish this note! ...
       nrs->ret = (NrsRet) {
         .kind = NrsRetKind_Pause,
         .duration = nrs->to_wait,

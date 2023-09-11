@@ -54,7 +54,7 @@ static float signf(float f) {
 #define SPRITE_SIZE (16)
 #define DOODLE_PANE_SIZE (SPRITE_SIZE*SPRITE_SIZE / 8)
 typedef struct {
-  /* doodles have 5 panes */
+  // doodles have 5 panes
   uint8_t lit [DOODLE_PANE_SIZE];
   uint8_t rgb0[DOODLE_PANE_SIZE];
   uint8_t rgb1[DOODLE_PANE_SIZE];
@@ -67,7 +67,7 @@ struct Sprite {
   char kind;
   int8_t  dx, dy;
   uint16_t x,  y;
-  uint16_t next; /* index of next sprite in list + 1 (0 null) */
+  uint16_t next; // index of next sprite in list + 1 (0 null)
   jerry_value_t object;
 };
 static void map_free(Sprite *s);
@@ -85,11 +85,11 @@ typedef struct {
   Color palette[16];
   int scale;
 
-  /* some SoA v. AoS shit goin on here man */
+  // some SoA v. AoS shit goin on here man
   int doodle_index_count;
-  uint8_t legend_doodled[PER_CHAR]; /* PER_CHAR = because it's used for assigning indices */
-  Doodle *legend;         /* tied to state->legend_size */
-  Doodle *legend_resized; /* tied to state->legend_size */
+  uint8_t legend_doodled[PER_CHAR]; // PER_CHAR = because it's used for assigning indices
+  Doodle *legend;         // tied to state->legend_size
+  Doodle *legend_resized; // tied to state->legend_size
 
 } State_Render;
 
@@ -105,23 +105,23 @@ typedef struct {
 
   uint8_t solid[PER_CHAR];
   uint16_t legend_size;
-  uint8_t *push_table; /* tied to state->legend_size */
+  uint8_t *push_table; // tied to state->legend_size
 
   size_t    sprite_pool_size;
   Sprite   *sprite_pool;
   uint8_t  *sprite_slot_active;
   uint32_t *sprite_slot_generation;
 
-  uint16_t *map; /* indexes into sprite_pool + 1 (0 null) */
+  uint16_t *map; // indexes into sprite_pool + 1 (0 null)
 
-  int tile_size; /* how small tiles have to be to fit map on screen */
+  int tile_size; // how small tiles have to be to fit map on screen
   char background_sprite;
 
   State_Render *render;
 
   /* this is honestly probably heap abuse and most kaluma uses of it should
-     probably use stack memory instead. It started out as a way to pass
-     strings across the WASM <-> JS barrier. */
+   * probably use stack memory instead. It started out as a way to pass
+   * strings across the WASM <-> JS barrier. */
   char temp_str_mem[(1 << 12)];
 } State;
 static State *state = 0;
@@ -213,7 +213,7 @@ static void sprite_pool_realloc(int size) {
     fatal_error();
   }
 
-  /* great, we were able to allocate enough memory */
+  // great, we were able to allocate enough memory
   state->sprite_pool_size = size;
 }
 
@@ -252,7 +252,7 @@ static void legend_doodles_realloc(int size) {
     fatal_error();
   }
 
-  /* great, we were able to allocate enough memory */
+  // great, we were able to allocate enough memory
   state->legend_size = size;
 }
 
@@ -296,7 +296,7 @@ WASM_EXPORT void init(void (*map_free_cb)(Sprite *)) {
 
   state->map_free_cb = map_free_cb;
 
-  /* -- error handling for when state is dynamically allocated -- */ 
+  // -- error handling for when state is dynamically allocated -- 
   // if (state->render == 0) {
   //   state->render = malloc(sizeof(State_Render));
   //   printf("sizeof(State_Render) = %d, addr: %d\n", sizeof(State_Render), (unsigned int)state->render);
@@ -332,11 +332,11 @@ WASM_EXPORT char *temp_str_mem(void) {
   return state->temp_str_mem;
 }
 
-/* call this when the map changes size, or when the legend changes */
+// call this when the map changes size, or when the legend changes
 static void render_resize_legend(void) {
   __builtin_memset(state->render->legend_resized, 0, sizeof(Doodle) * state->legend_size);
 
-  /* how big do our tiles need to be to fit them all snugly on screen? */
+  // how big do our tiles need to be to fit them all snugly on screen?
   float min_tile_x = SCREEN_SIZE_X / state->width;
   float min_tile_y = SCREEN_SIZE_Y / state->height;
   state->tile_size = (min_tile_x < min_tile_y) ? min_tile_x : min_tile_y;
@@ -488,7 +488,7 @@ WASM_EXPORT uint32_t sprite_generation(Sprite *s) {
 }
 
 /* removes the canonical reference to this sprite from the spatial grid.
-   it is your responsibility to subsequently free the sprite. */
+ * it is your responsibility to subsequently free the sprite. */
 static void map_pluck(Sprite *s) {
   Sprite *top = get_sprite(state->map[s->x + s->y * state->width]);
   // assert(top != 0);
@@ -516,7 +516,7 @@ static void map_pluck(Sprite *s) {
 static void map_plop(Sprite *sprite) {
   Sprite *top = get_sprite(state->map[sprite->x + sprite->y * state->width]);
 
-  /* we want the sprite with the lowest z-order on the top. */
+  // we want the sprite with the lowest z-order on the top.
 
   #define Z_ORDER(sprite) (state->char_to_index[(int)(sprite)->kind])
   if (top == 0 || Z_ORDER(top) >= Z_ORDER(sprite)) {
@@ -553,7 +553,7 @@ WASM_EXPORT Sprite *map_add(int x, int y, char kind) {
 WASM_EXPORT void map_set(char *str) {
   dbg("wormed ya way down into base_engine.c");
 
-  /* figure out how big of an allocation we need to make,  if any */
+  // figure out how big of an allocation we need to make,  if any
   int tx = 0, ty = 0;
   char *str_dup = str;
   do {
@@ -571,7 +571,7 @@ WASM_EXPORT void map_set(char *str) {
 
   if (!state->width || !state->height) return;
 
-  /* free stuff so we can create new ones */
+  // free stuff so we can create new ones
   if (state->map != NULL)
     jerry_heap_free(state->map, old_map_size);
   for (int i = 0; i < state->sprite_pool_size; i++)
@@ -669,7 +669,7 @@ WASM_EXPORT uint8_t map_tiles_with(MapIter *m, char *kinds) {
   for (; *kinds; kinds++) {
     int c = (int)*kinds;
     
-    /* filters out duplicates! */
+    // filters out duplicates!
     if (kinds_needed[c] != 0) continue;
 
     kinds_len++;
@@ -713,7 +713,7 @@ WASM_EXPORT void map_remove(Sprite *s) {
   map_free(s);
 }
 
-/* removes all of the sprites at a given location */
+// removes all of the sprites at a given location
 WASM_EXPORT void map_drill(int x, int y) {
   if (x < 0 || x >= state->width ) return;
   if (y < 0 || y >= state->height) return;
@@ -727,12 +727,12 @@ WASM_EXPORT void map_drill(int x, int y) {
 
 
 /* move a sprite by one unit along the specified axis
-   returns how much it was moved on that axis (may be 0 if path obstructed) */
+ * returns how much it was moved on that axis (may be 0 if path obstructed) */
 static int _map_move(Sprite *s, int big_dx, int big_dy) {
   int dx = signf(big_dx);
   int dy = signf(big_dy);
 
-  /* expected input: x and y aren't both 0, either x or y is non-zero (not both) */
+  // expected input: x and y aren't both 0, either x or y is non-zero (not both)
   if (dx == 0 && dy == 0) return 0;
 
   int prog = 0;
@@ -742,19 +742,19 @@ static int _map_move(Sprite *s, int big_dx, int big_dy) {
     int x = s->x+dx;
     int y = s->y+dy;
 
-    /* no moving off of the map! */
+    // no moving off of the map!
     if (x < 0) return prog;
     if (y < 0) return prog;
     if (x >= state->width) return prog;
     if (y >= state->height) return prog;
 
     if (state->solid[(int)s->kind]) {
-      /* no moving into a solid! */
+      // no moving into a solid!
       Sprite *n = get_sprite(state->map[x + y * state->width]);
 
       for (; n; n = get_sprite(n->next))
         if (state->solid[(int)n->kind]) {
-          /* unless you can push them out of the way ig */
+          // unless you can push them out of the way ig
           if (push_table_read(s->kind, n->kind)) {
             if (_map_move(n, dx, dy) == 0)
               return prog;
@@ -813,7 +813,7 @@ WASM_EXPORT void legend_doodle_set(char kind, char *str) {
 
   int index = state->char_to_index[(int)kind];
 
-  /* we don't want to increment if index 0 has already been assigned and this is it */
+  // we don't want to increment if index 0 has already been assigned and this is it
   if (index == 0 && !state->render->legend_doodled[(int)kind]) {
     if (state->render->doodle_index_count >= state->legend_size)
       legend_doodles_realloc(state->legend_size * 1.2f);
