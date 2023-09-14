@@ -25,7 +25,7 @@
 #include <stdio.h>
 
 #include "jerryscript.h"
-#include "errorbuf.h"
+#include "shared/ui/errorbuf.h"
 
 #define JERRYXX_FUN(name)                                           \
   static jerry_value_t name(                                        \

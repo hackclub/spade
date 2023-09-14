@@ -3,6 +3,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include <stdint.h>
+#include "shared/sprig_engine/script.h"
 
 // #define SPADE_AUTOMATED
 
@@ -12,7 +13,7 @@
 #endif
 
 #ifdef SPADE_AUDIO
-  #include "audio.h"
+  #include "shared/audio/audio.h"
 #endif
 
 #if 1
@@ -23,21 +24,21 @@
   #define dbg puts
 #endif
 
-#include "jerry_mem.h"
+#include "shared/js_runtime/jerry_mem.h"
 
 #define yell puts
 
 char errorbuf[512] = "";
 static void fatal_error(void) { abort(); }
-#include "base_engine.c"
+#include "shared/sprig_engine/base_engine.c"
 
 #include "jerryscript.h"
-#include "jerryxx.h"
+#include "shared/js_runtime/jerryxx.h"
 
 // jumbo builds out of laziness
 static void module_native_init(jerry_value_t exports);
-#include "js.h"
-#include "module_native.c"
+#include "shared/js_runtime/js.h"
+#include "shared/sprig_engine/module_native.c"
 
 #define SPADE_WIN_SIZE_X (SCREEN_SIZE_X)
 #define SPADE_WIN_SIZE_Y (SCREEN_SIZE_Y + 3*8)
@@ -198,14 +199,11 @@ void render_stats(Color *screen) {
 }
 
 static void js_init(char *file, int file_size) {
-  const jerry_char_t engine[] = 
-#include "engine.min.js.cstring"
-  ;
-  char *combined = calloc(sizeof(engine) - 1 + file_size, 1);
-  strcpy(combined, engine);
-  strcpy(combined + sizeof(engine) - 1, file);
+  char *combined = calloc(sizeof(engine_script) - 1 + file_size, 1);
+  strcpy(combined, engine_script);
+  strcpy(combined + sizeof(engine_script) - 1, file);
 
-  const jerry_length_t combined_size = sizeof (engine) - 1 + file_size;
+  const jerry_length_t combined_size = sizeof (engine_script) - 1 + file_size;
   js_run(combined, combined_size);
 }
 

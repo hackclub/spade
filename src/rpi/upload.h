@@ -1,4 +1,4 @@
-#include "script.h"
+#include "shared/sprig_engine/script.h"
 #include "hardware/flash.h"
 static void core1_entry(void);
 

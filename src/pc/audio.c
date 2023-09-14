@@ -7,7 +7,8 @@
   #define printf(...) ;
 #endif
 
-#include "audio.h"
+#include "shared/audio/piano.c"
+#include "shared/audio/audio.h"
 
 static  int audio_hw_init   (void);
 static void audio_hw_cleanup(void);

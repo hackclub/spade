@@ -5,13 +5,16 @@
       "name": "pc",
       "displayName": "PC Build",
       "generator": "Unix Makefiles",
-      "binaryDir": "${sourceDir}/pc_build/"
+      "binaryDir": "${sourceDir}/pc_build/",
+      "cacheVariables": {
+        "SPADE_TARGET": "pc"
+      }
     },
     {
       "name": "rpi",
       "displayName": "Pico Build",
       "generator": "Unix Makefiles",
-      "binaryDir": "${sourceDir}/rpi_build",
+      "binaryDir": "${sourceDir}/rpi_build/",
       "cacheVariables": {
         "SPADE_TARGET": "rpi"
       },
@@ -19,6 +22,18 @@
         "PICO_SDK_PATH": "~/raspberrypi/pico-sdk",
         "PICO_EXTRAS_PATH": "~/raspberrypi/pico-extras"
       }
+    }
+  ],
+  "buildPresets": [
+    {
+      "name": "pc",
+      "displayName": "PC Build",
+      "configurePreset": "pc"
+    },
+    {
+      "name": "rpi",
+      "displayName": "Pico Build",
+      "configurePreset": "rpi"
     }
   ]
 }

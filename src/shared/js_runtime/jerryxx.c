@@ -20,7 +20,7 @@
  */
 
 #include "jerryxx.h"
-#include "script.h"
+#include "shared/sprig_engine/script.h"
 
 #include <math.h>
 #include <stdio.h>

@@ -14,7 +14,7 @@ Prerequisites:
 
 - A working Python 3 environment.
 - The ability to run Bash scripts.
-- A C build environment, preferably Clang. on Windows, GC won't work and you must use Clang. make sure CMake and Make are both working.
+- A C build environment, preferably Clang. on Windows, GCC won't work and you must use Clang. Make sure CMake and Make are both working.
 - Entr and uglifyjs installed to use jsdev.sh.
 
 Set up your build environment. All folders need to be in your home directory, although they can be linked if you prefer.
@@ -64,20 +64,19 @@ Run `./jsdev.sh` to minify and update the engine. Keep it running to auto-update
 
 ```sh
 cmake --preset=rpi
-cd rpi_build
-make
+# then...
+cmake --build --preset=rpi
 ```
 
-A UF2 file will be outputted to `spade.uf2`. On macOS, with a Pico plugged in and in BOOTSEL mode, you can transfer from the CLI with `
-cp spade.uf2 /Volumes/RPI-RP2`.
+A UF2 file will be outputted to `rpi_build/src/spade.uf2`. On macOS, with a Pico plugged in and in BOOTSEL mode, you can transfer from the CLI with `cp ./rpi_build/src/spade.uf2 /Volumes/RPI-RP2`.
 
 ### PC Build
 
 ```sh
 cmake --preset=pc
-cd pc_build
-make
-./spade ../game.min.js
+# then...
+cmake --build --preset=pc
+./pc_build/src/spade ../game.min.js
 ```
 
 The audio emulator is written for CoreAudio and audio will be muted on non-macOS systems.

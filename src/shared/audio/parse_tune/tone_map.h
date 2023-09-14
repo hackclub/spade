@@ -14,8 +14,10 @@
 
 // optimal size multiplier is 12! (2136 bytes)
 
+#include <stdint.h>
+
 static uint64_t fnv1_hash(void *key, int n_bytes) {
-  unsigned char *p = key;
+  unsigned char *p = (unsigned char *)key;
   uint64_t h = 14695981039346656037ul;
   for (int i = 0; i < n_bytes; i++)
     h = (h * 1099511628211) ^ p[i];

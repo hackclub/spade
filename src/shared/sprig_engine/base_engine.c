@@ -1,6 +1,6 @@
 #include <stdint.h>
-#include "errorbuf.h"
-#include "font.h"
+#include "shared/ui/errorbuf.h"
+#include "shared/ui/font.h"
 #include "jerryscript.h"
 
 #ifdef __wasm__

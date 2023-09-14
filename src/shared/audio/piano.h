@@ -1,3 +1,5 @@
+#pragma once
+
 float strtof(const char *restrict nptr, char **restrict endptr);
 #include <stdint.h>
 

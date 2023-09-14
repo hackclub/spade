@@ -19,10 +19,10 @@
 #include "hardware/adc.h"
 #include "pico/util/queue.h"
 #include "pico/multicore.h"
-#include "jerry_mem.h"
+#include "shared/js_runtime/jerry_mem.h"
 
 #ifdef SPADE_AUDIO
-#include "audio.h"
+#include "shared/audio/audio.h"
 #endif
 #include "ST7735_TFT.h"
 #include "upload.h"
@@ -30,15 +30,15 @@
 #define ARR_LEN(arr) (sizeof(arr) / sizeof(arr[0]))
 char errorbuf[512] = "";
 
-#include "base_engine.c"
+#include "shared/sprig_engine/base_engine.c"
 
 #include "jerryscript.h"
-#include "jerryxx.h"
+#include "shared/js_runtime/jerryxx.h"
 
 // jumbo builds out of laziness
 static void module_native_init(jerry_value_t exports);
-#include "js.h"
-#include "module_native.c"
+#include "shared/js_runtime/js.h"
+#include "shared/sprig_engine/module_native.c"
 
 // permanent loop rendering errbuf
 static void write_pixel(int x, int y, Color c);

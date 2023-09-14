@@ -9,7 +9,7 @@
 #define HashIndex int16_t
 
 static uint64_t fnv1_hash(void *key, int n_bytes) {
-  unsigned char *p = key;
+  unsigned char *p = (unsigned char *)key;
   uint64_t h = 14695981039346656037ul;
   for (int i = 0; i < n_bytes; i++)
     h = (h * 1099511628211) ^ p[i];
@@ -18,7 +18,7 @@ static uint64_t fnv1_hash(void *key, int n_bytes) {
 
 char *fnv1_hash_src = 
   "static uint64_t fnv1_hash(void *key, int n_bytes) {\n"
-  "  unsigned char *p = key;\n"
+  "  unsigned char *p = (unsigned char *)key;\n"
   "  uint64_t h = 14695981039346656037ul;\n"
   "  for (int i = 0; i < n_bytes; i++)\n"
   "    h = (h * 1099511628211) ^ p[i];\n"
@@ -153,6 +153,8 @@ int main(void) {
       "\n// optimal size multiplier is %d! (%lu bytes)\n\n",
       size, size*ARR_LEN(tones)*sizeof(HashIndex)
     );
+
+    puts("#include <stdint.h>\n\n");
 
     puts(fnv1_hash_src);
     printf("uint16_t tone_map[%d] = {\n", map_size);

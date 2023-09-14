@@ -1,3 +1,5 @@
+#include "jerryscript.h"
+
 JERRYXX_FUN(console_log) {
   jerryxx_print_value(JERRYXX_GET_ARG(0));
   return jerry_create_undefined();

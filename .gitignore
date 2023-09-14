@@ -2,8 +2,11 @@ build/
 pc_build/
 rpi_build/
 .DS_Store
-pc/jerry/include
-pc/jerry/lib
+src/pc/jerry/include
+src/pc/jerry/lib
+CMakeFiles/
+Makefile
+cmake_install.cmake
 engine.js.cstring
 engine.min.js
 engine.min.js.cstring

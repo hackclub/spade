@@ -1,4 +1,4 @@
-#include "piano.h"
+#include "shared/audio/piano.h"
 
 #include "hardware/clocks.h"
 #include "hardware/structs/clocks.h"
