@@ -1,7 +1,8 @@
 #pragma once
 
-float strtof(const char *restrict nptr, char **restrict endptr);
 #include <stdint.h>
+
+float strtof(const char *restrict nptr, char **restrict endptr);
 
 // gaps in your audio? increase this
 #define SAMPLES_PER_BUFFER (256*8)

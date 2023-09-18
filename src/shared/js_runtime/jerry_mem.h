@@ -1,4 +1,7 @@
+#pragma once
+
 #include "jerryscript.h"
+
 static void *jerry_calloc(size_t count, size_t size) {
   void *ptr = jerry_heap_alloc(count * size);
   memset(ptr, 0, count * size);

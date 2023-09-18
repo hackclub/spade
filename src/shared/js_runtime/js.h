@@ -1,4 +1,9 @@
+#pragma once
+
 #include "jerryscript.h"
+#include "jerryxx.h"
+#include "shared/sprig_engine/module_native.h"
+#include "shared/sprig_engine/base_engine.h"
 
 JERRYXX_FUN(console_log) {
   jerryxx_print_value(JERRYXX_GET_ARG(0));

@@ -31,9 +31,9 @@
 char errorbuf[512] = "";
 
 #include "shared/sprig_engine/base_engine.c"
+#include "shared/js_runtime/jerryxx.c"
 
 #include "jerryscript.h"
-#include "shared/js_runtime/jerryxx.h"
 
 // jumbo builds out of laziness
 static void module_native_init(jerry_value_t exports);

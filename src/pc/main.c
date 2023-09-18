@@ -4,19 +4,23 @@
 #include <stdlib.h>
 #include <stdint.h>
 #include "shared/sprig_engine/script.h"
+#include "audio.c"
 
+/**
+ * SPADE_AUTOMATED isn't really used anymore, but we're keeping around the
+ * ifdefs just in case it comes in handy in the future.
+ * 
+ * It disables keyboard input and adds some debugging prints for the sake
+ * of automated testing.
+ */
 // #define SPADE_AUTOMATED
-
 #ifdef SPADE_AUTOMATED
   #define puts(...) ;
   #define printf(...) ;
 #endif
 
-#ifdef SPADE_AUDIO
-  #include "shared/audio/audio.h"
-#endif
-
-#if 1
+// Set to false to enable debug prints for development (this is janky)
+#if true
   #define dbg(...) ;
   #define dbgf(...) ;
 #else
@@ -24,27 +28,27 @@
   #define dbg puts
 #endif
 
-#include "shared/js_runtime/jerry_mem.h"
-
+// Debugging shortcut
 #define yell puts
 
+// Externs for shared/ui/errorbuf.h
 char errorbuf[512] = "";
 static void fatal_error(void) { abort(); }
+#include "shared/ui/errorbuf.h"
+
+// Other imports
 #include "shared/sprig_engine/base_engine.c"
-
-#include "jerryscript.h"
-#include "shared/js_runtime/jerryxx.h"
-
-// jumbo builds out of laziness
-static void module_native_init(jerry_value_t exports);
-#include "shared/js_runtime/js.h"
 #include "shared/sprig_engine/module_native.c"
+#include "shared/js_runtime/jerryxx.c"
+#include "shared/js_runtime/jerry_mem.h"
+#include "jerryscript.h"
 
 #define SPADE_WIN_SIZE_X (SCREEN_SIZE_X)
 #define SPADE_WIN_SIZE_Y (SCREEN_SIZE_Y + 3*8)
 #define SPADE_WIN_SCALE (2)
 
 #ifdef SPADE_AUTOMATED
+// Print the map as ascii for debugging
 static void print_map(void) {
   // find max on Z axis
   int z_size = 0;
@@ -108,6 +112,7 @@ static void print_map(void) {
   fflush(stdout);
 }
 
+// Read keyboard inputs from stdin
 static void simulated_keyboard(void) {
   char key = getchar();
        if (key == 'w') spade_call_press( 5); // map_move(map_get_first('p'),  0, -1);
@@ -123,6 +128,7 @@ static void simulated_keyboard(void) {
   print_map();
 }
 #else
+// Window keyboard input handler
 static void keyboard(struct mfb_window *window, mfb_key key, mfb_key_mod mod, bool isPressed) {
   (void) window;
   if (!isPressed) return;
@@ -146,8 +152,7 @@ static void keyboard(struct mfb_window *window, mfb_key key, mfb_key_mod mod, bo
 }
 #endif
 
-int peak_bitmap_count = 0;
-int peak_sprite_count = 0;
+// Render a character to screen (used only for stats display)
 static void render_char(Color *screen, char c, Color color, int sx, int sy) {
   for (int y = 0; y < 8; y++) {
     uint8_t bits = font_pixels[c*8 + y];
@@ -157,9 +162,17 @@ static void render_char(Color *screen, char c, Color color, int sx, int sy) {
       }
   }
 }
+
+// Render debug stats (memory usage, bitmap count, etc.)
 void render_stats(Color *screen) {
-  /* +1 on mem because sprintf might write an extra null term, doesn't matter for others
-   * bc they shouldn't get to filling the buffer
+  static int peak_bitmap_count = 0;
+  static int peak_sprite_count = 0;
+
+  /**
+   * 20 * 8 is the max number of characters we can fit on the screen
+   * 
+   * +1 on mem size because sprintf might write an extra null term, doesn't matter for others
+   * bc their buffers should never be filled (given max lengths below)
    * 
    * format with assumed max lengths:
    *
@@ -169,6 +182,7 @@ void render_stats(Color *screen) {
    * sprites: 100 (100)
    * maps: 100 (100)
    */
+
   char mem[20 * 8 + 1] = "";
   char bitmaps[20 * 8] = "";
   char sprites[20 * 8] = "";
@@ -177,8 +191,8 @@ void render_stats(Color *screen) {
   jerry_heap_stats_t stats = {0};
   if (jerry_get_memory_stats(&stats)) {
     sprintf(mem, "mem: %lukB (%lukB)", stats.allocated_bytes / 1000, stats.peak_allocated_bytes / 1000);
-    if (stats.peak_allocated_bytes > 200000) mem_color = color16(255, 255, 0);
-    if (stats.allocated_bytes > 200000) mem_color = color16(255, 0, 0);
+    if (stats.peak_allocated_bytes > 200000) mem_color = color16(255, 255, 0); // yellow
+    if (stats.allocated_bytes > 200000) mem_color = color16(255, 0, 0); // red
   }
 
   int bitmap_count = state->render->doodle_index_count;
@@ -191,6 +205,7 @@ void render_stats(Color *screen) {
   if (sprite_count > peak_sprite_count) peak_sprite_count = sprite_count;
   sprintf(sprites, "sprites: %d (%d)", sprite_count, peak_sprite_count);
 
+  // Draw!
   for (int i = 0; i < 20 * 8; i++) {
     if (mem[i] != '\0') render_char(screen, mem[i], mem_color, i*8, SCREEN_SIZE_Y);
     if (bitmaps[i] != '\0') render_char(screen, bitmaps[i], color16(255, 255, 255), i*8, SCREEN_SIZE_Y + 8);
@@ -198,7 +213,9 @@ void render_stats(Color *screen) {
   }
 }
 
+// Run the provided JS code. Copies from file, which can be safely freed after.
 static void js_init(char *file, int file_size) {
+  // Concatenate the engine script and the user script
   char *combined = calloc(sizeof(engine_script) - 1 + file_size, 1);
   strcpy(combined, engine_script);
   strcpy(combined + sizeof(engine_script) - 1, file);
@@ -207,26 +224,31 @@ static void js_init(char *file, int file_size) {
   js_run(combined, combined_size);
 }
 
-void piano_jerry_song_free(void *p) {
-  // it's straight up a jerry_value_t, not even a pointer to one
-  jerry_value_t jvt = (jerry_value_t)p;
+/**
+ * Implementations for PianoOpts (see src/shared/audio/piano.h)
+ * 
+ * p (the song object) is type erased because that's an implementation detail
+ * for us. It's actually a jerry_value_t, not a void pointer, so we gotta cast.
+ */
 
+void piano_jerry_song_free(void *p) {
+  jerry_value_t jvt = (jerry_value_t)p;
   jerry_release_value(jvt);
 }
-int piano_jerry_song_chars(void *p, char *buf, int buf_len) {
-  // it's straight up a jerry_value_t, not even a pointer to one
-  jerry_value_t jvt = (jerry_value_t)p;
 
-  int read = jerry_string_to_char_buffer(jvt, (jerry_char_t *)buf, (jerry_size_t) buf_len);
+int piano_jerry_song_chars(void *p, char *buf, int buf_len) {
+  jerry_value_t jvt = (jerry_value_t)p;
+  int read = jerry_string_to_char_buffer(jvt, (jerry_char_t *)buf, (jerry_size_t)buf_len);
   return read;
 }
 
-Color *write_pixel_screen = 0;
+// The screen! This will be non-null before we render.
+Color *write_pixel_screen = NULL;
 static void write_pixel(int x, int y, Color c) {
   write_pixel_screen[y*160 + x] = c;
 }
 
-// free that shit when u done
+// Read a file to a buffer. Also populates size argument with the file size.
 char *read_in_script(char *path, int *size) {
   FILE *script = fopen(path, "r");
   if (script == NULL) perror("couldn't open file arg"), abort();
@@ -243,33 +265,41 @@ char *read_in_script(char *path, int *size) {
 }
 
 int main(int argc, char *argv[])  {
-  struct mfb_window *window = mfb_open_ex("spade", SPADE_WIN_SIZE_X * 2, SPADE_WIN_SIZE_Y * 2, 0);
-  if (!window) return 1;
+  // Make a window
+  struct mfb_window *window = mfb_open_ex("spade", SPADE_WIN_SIZE_X * SPADE_WIN_SCALE, SPADE_WIN_SIZE_Y * SPADE_WIN_SCALE, 0);
+  if (!window) {
+    yell("failed to open window");
+    return 1;
+  }
 
-  // seed the random number generator
+  // Seed the C random number generator with the current time
   union { double d; unsigned u; } now = { .d = jerry_port_get_current_time() };
-  srand (now.u);
+  srand(now.u);
   
-  jerry_init (JERRY_INIT_MEM_STATS);
-  init(sprite_free_jerry_object); // god i REALLY need to namespace baseengine
+  // Initialize the JS engine
+  jerry_init(JERRY_INIT_MEM_STATS);
+  init(sprite_free_jerry_object);
 
-  // first arg = path to js code to run
+  // First argument to this program is path to JS code to run
   {
     int script_len = 0;
     char *script = read_in_script(argv[1], &script_len);
-    js_init(script, script_len);
+    js_init(script, script_len); // <- run the code!
     free(script);
   }
-#ifdef SPADE_AUTOMATED
-  print_map();
-  // we so cool we take input from stdin now
-#else
-  mfb_set_keyboard_callback(window, keyboard);
-#endif
+  
+  #ifdef SPADE_AUTOMATED
+    print_map();
+  #else
+    // Not run if automated (we take input from stdin in the event loop instead of the window)
+    mfb_set_keyboard_callback(window, keyboard);
+  #endif
 
   Color screen[SPADE_WIN_SIZE_X * SPADE_WIN_SIZE_Y] = {0};
+  write_pixel_screen = screen;
 
   #ifdef SPADE_AUDIO
+    // Initialize audio
     piano_init((PianoOpts) {
       .song_free = piano_jerry_song_free,
       .song_chars = piano_jerry_song_chars,
@@ -277,32 +307,37 @@ int main(int argc, char *argv[])  {
     audio_init();
   #endif
 
+  // Current time for timer handling (see frame_cb in shared/sprig_engine/engine.js)
   struct mfb_timer *lastframe = mfb_timer_create();
   mfb_timer_now(lastframe);
+
+  // Event loop!
   do {
-    // setInterval/Timeout impl
+    // Run async code
     js_promises();
+
+    // setInterval/setTimeout impl
     spade_call_frame(1000.0f * mfb_timer_delta(lastframe));
     mfb_timer_now(lastframe);
 
-    // audio
+    // Audio
     #ifdef SPADE_AUDIO
       audio_try_push_samples();
     #endif
 
-    // render
-    memset(screen, 0, sizeof(screen));
-    render_errorbuf();
-    write_pixel_screen = screen;
-    render(write_pixel);
-    render_stats(screen);
+    // Render
+    memset(screen, 0, sizeof(screen)); // Clear screen
+    render_errorbuf();    // Render runtime errors to screen
+    render(write_pixel);  // Render game
+    render_stats(screen); // Render debug stats
 
-#ifdef SPADE_AUTOMATED
-    simulated_keyboard();
-#endif
+    // If automated, read keypresses from stdin
+    #ifdef SPADE_AUTOMATED
+      simulated_keyboard();
+    #endif
 
-    // windowing
-    uint8_t ok = STATE_OK == mfb_update_ex(window, screen, SPADE_WIN_SIZE_X, SPADE_WIN_SIZE_Y);
+    // Update the window with new screen buffer
+    uint8_t ok = mfb_update_ex(window, screen, SPADE_WIN_SIZE_X, SPADE_WIN_SIZE_Y) == STATE_OK;
     if (!ok) {
       window = 0x0;
       break;

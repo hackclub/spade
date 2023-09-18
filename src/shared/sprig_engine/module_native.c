@@ -1,3 +1,5 @@
+#include "module_native.h"
+
 #include <stdlib.h>
 #include <stdio.h>
 #include <ctype.h>
@@ -5,6 +7,10 @@
 #include <string.h>
 #include "jerryscript.h"
 #include "native_magic_strings.h"
+
+#include "shared/js_runtime/js.h"
+#include "shared/js_runtime/jerryxx.h"
+#include "shared/audio/piano.h"
 
 static struct {
   jerry_value_t x, y, dx, dy, addr, type, _x, _y, _type, push, remove, generation;

@@ -1,8 +1,4 @@
-/**
- * Copyright (c) 2020 Raspberry Pi (Trading) Ltd.
- *
- * SPDX-License-Identifier: BSD-3-Clause
- */
+// piano ties together our sample table, our note reader, and pico's audio buffer pool
 
 #include <stdio.h>
 #include <ctype.h>
@@ -23,7 +19,6 @@ typedef enum {
 #include "parse_tune/parse_tune.h"
 
 #define TABLE_LEN 2048
-
 
 typedef struct {
   uint32_t step;
@@ -50,7 +45,6 @@ typedef struct {
   int sample_duration;
 } Song;
 
-// piano ties together our sample table, our note reader and pico's audio buffer pool
 #define SONG_COUNT 4
 const float sound_weights[Sound_COUNT] = {
   [Sound_Sine]     = 1.00f,
@@ -66,8 +60,10 @@ static struct {
   PianoOpts opts;
 } piano_state = {0};
 
-/* type erased jerry_value_t (well, doesn't matter what as long as
- * opts.song_chars and opts.song_free work on it) */
+/**
+ * char_source is a type erased jerry_value_t (well, doesn't matter what as long as
+ * opts.song_chars and opts.song_free work on it)
+ */
 int piano_queue_song(void *char_source, double times) {
   for (int ci = 0; ci < SONG_COUNT; ci++) {
     Song *song = piano_state.song + ci;
