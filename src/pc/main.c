@@ -4,7 +4,10 @@
 #include <stdlib.h>
 #include <stdint.h>
 #include "shared/sprig_engine/script.h"
-#include "audio.c"
+
+#ifdef SPADE_AUDIO
+  #include "audio.c"
+#endif
 
 /**
  * SPADE_AUTOMATED isn't really used anymore, but we're keeping around the
@@ -31,17 +34,18 @@
 // Debugging shortcut
 #define yell puts
 
-// Externs for shared/ui/errorbuf.h
-char errorbuf[512] = "";
-static void fatal_error(void) { abort(); }
-#include "shared/ui/errorbuf.h"
-
 // Other imports
 #include "shared/sprig_engine/base_engine.c"
 #include "shared/sprig_engine/module_native.c"
 #include "shared/js_runtime/jerryxx.c"
 #include "shared/js_runtime/jerry_mem.h"
 #include "jerryscript.h"
+
+// Externs for shared/ui/errorbuf.h
+char errorbuf[512] = "";
+Color errorbuf_color; // Initialized in main()
+static void fatal_error(void) { abort(); }
+#include "shared/ui/errorbuf.h"
 
 #define SPADE_WIN_SIZE_X (SCREEN_SIZE_X)
 #define SPADE_WIN_SIZE_Y (SCREEN_SIZE_Y + 3*8)
@@ -230,22 +234,34 @@ static void js_init(char *file, int file_size) {
  * p (the song object) is type erased because that's an implementation detail
  * for us. It's actually a jerry_value_t, not a void pointer, so we gotta cast.
  */
+#ifdef SPADE_AUDIO
+  void piano_jerry_song_free(void *p) {
+    jerry_value_t jvt = (jerry_value_t)p;
+    jerry_release_value(jvt);
+  }
 
-void piano_jerry_song_free(void *p) {
-  jerry_value_t jvt = (jerry_value_t)p;
-  jerry_release_value(jvt);
-}
-
-int piano_jerry_song_chars(void *p, char *buf, int buf_len) {
-  jerry_value_t jvt = (jerry_value_t)p;
-  int read = jerry_string_to_char_buffer(jvt, (jerry_char_t *)buf, (jerry_size_t)buf_len);
-  return read;
-}
+  int piano_jerry_song_chars(void *p, char *buf, int buf_len) {
+    jerry_value_t jvt = (jerry_value_t)p;
+    int read = jerry_string_to_char_buffer(jvt, (jerry_char_t *)buf, (jerry_size_t)buf_len);
+    return read;
+  }
+#endif
 
 // The screen! This will be non-null before we render.
 Color *write_pixel_screen = NULL;
-static void write_pixel(int x, int y, Color c) {
-  write_pixel_screen[y*160 + x] = c;
+
+// Screen offset. We're simulating the RPI screen, which is written
+// in top to bottom, left to right order without coordinates.
+int write_pixel_offset = 0;
+
+// Write a pixel! Must be called in top to bottom, left to right order.
+static void write_pixel(Color c) {
+  // Transform write_pixel_offset into x and y coordinates.
+  int x = write_pixel_offset / SCREEN_SIZE_Y;
+  int y = write_pixel_offset % SCREEN_SIZE_Y;
+  
+  write_pixel_screen[y * SCREEN_SIZE_X + x] = c;
+  write_pixel_offset++;
 }
 
 // Read a file to a buffer. Also populates size argument with the file size.
@@ -265,6 +281,9 @@ char *read_in_script(char *path, int *size) {
 }
 
 int main(int argc, char *argv[])  {
+  // Make errors red
+  errorbuf_color = color16(255, 0, 0);
+  
   // Make a window
   struct mfb_window *window = mfb_open_ex("spade", SPADE_WIN_SIZE_X * SPADE_WIN_SCALE, SPADE_WIN_SIZE_Y * SPADE_WIN_SCALE, 0);
   if (!window) {
@@ -327,7 +346,8 @@ int main(int argc, char *argv[])  {
 
     // Render
     memset(screen, 0, sizeof(screen)); // Clear screen
-    render_errorbuf();    // Render runtime errors to screen
+    write_pixel_offset = 0;            // Reset screen offset
+    render_errorbuf();    // Render errorbuf to game text
     render(write_pixel);  // Render game
     render_stats(screen); // Render debug stats
 

@@ -335,13 +335,14 @@ static void render_calc_bounds(be_Rect *rect) {
   rect->y = (SCREEN_SIZE_Y - rect->height)/2;
 }
 
-static void render(void (*write_pixel)(int x, int y, Color c)) {
+// write_pixel will be run in top to bottom, left to right order
+static void render(void (*write_pixel)(Color c)) {
   be_Rect rect = {0};
   render_calc_bounds(&rect);
 
   for (int x = 0; x < 160; x++)
     for (int y = 0; y < 128; y++)
-      write_pixel(x, y, render_pixel(&rect, x, y));
+      write_pixel(render_pixel(&rect, x, y));
 }
 
 
@@ -749,6 +750,7 @@ WASM_EXPORT void push_table_clear(void) {
   __builtin_memset(state->push_table, 0, state->legend_size*state->legend_size/8);
 }
 
+// Render errorbuf to game text.
 static void render_errorbuf(void) {
   int y = 0;
   int x = 0;
@@ -760,7 +762,7 @@ static void render_errorbuf(void) {
       if (errorbuf[i] == '\n') continue;
     }
     if (y >= (SCREEN_SIZE_Y / 8)) break;
-    state->text_color[y][x] = color16(255, 0, 0);
+    state->text_color[y][x] = errorbuf_color;
     state->text_char [y][x] = errorbuf[i];
     x++;
   }

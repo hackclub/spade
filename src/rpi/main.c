@@ -1,16 +1,3 @@
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-
-#define yell puts
-#if 1
-  #define dbg puts
-  #define dbgf printf
-#else
-  #define dbg(...) ;
-  #define dbgf(...) ;
-#endif
-
 #include "pico/stdlib.h"
 #include "hardware/pwm.h"
 #include "hardware/spi.h"
@@ -19,53 +6,81 @@
 #include "hardware/adc.h"
 #include "pico/util/queue.h"
 #include "pico/multicore.h"
-#include "shared/js_runtime/jerry_mem.h"
+#include "jerryscript.h"
+
+#include <stdio.h>
+#include <stdint.h>
+#include <stdlib.h>
+#include <string.h>
+
+// Set to false to enable debug prints for development (this is janky)
+#if true
+  #define dbg puts
+  #define dbgf printf
+#else
+  #define dbg(...) ;
+  #define dbgf(...) ;
+#endif
+
+// Debugging shortcut
+#define yell puts
 
 #ifdef SPADE_AUDIO
-#include "shared/audio/audio.h"
+  #include "audio.c"
 #endif
+
+// More firmware stuiff
 #include "ST7735_TFT.h"
 #include "upload.h"
 
-#define ARR_LEN(arr) (sizeof(arr) / sizeof(arr[0]))
-char errorbuf[512] = "";
-
+// Other imports
 #include "shared/sprig_engine/base_engine.c"
-#include "shared/js_runtime/jerryxx.c"
-
-#include "jerryscript.h"
-
-// jumbo builds out of laziness
-static void module_native_init(jerry_value_t exports);
-#include "shared/js_runtime/js.h"
 #include "shared/sprig_engine/module_native.c"
+#include "shared/js_runtime/jerry_mem.h"
+#include "shared/js_runtime/jerryxx.c"
+#include "shared/js_runtime/js.h"
 
-// permanent loop rendering errbuf
-static void write_pixel(int x, int y, Color c);
+// Externs for shared/ui/errorbuf.h
+char errorbuf[512] = "";
+Color errorbuf_color; // Initialized in main()
 static void fatal_error() {
+  // On fatal error, start an infinite loop rendering the errorbuf.
+  errorbuf_color = color16(255, 0, 0); // Make sure it's red
   while (1) {
     text_clear();
     render_errorbuf();
     st7735_fill_start();
-      render(write_pixel);
+    render(st7735_fill_send);
     st7735_fill_finish();
   }
 }
+#include "shared/ui/errorbuf.h"
 
+#define ARR_LEN(arr) (sizeof(arr) / sizeof(arr[0]))
+
+/**
+ * We store a 64-boolean ringbuffer of polled button states for a primitive
+ * sort of debouncing. The button counts as pressed if more than 5/6th of
+ * the ringbuffer is true.
+ * 
+ * (gpio_set_input_hysteresis_enabled was too slow.)
+ */
 #define HISTORY_LEN (64)
 typedef struct {
   uint8_t history[HISTORY_LEN/8];
-  uint8_t last_state, ring_i;
+  uint8_t last_state;
+  uint8_t ring_i;
 } ButtonState;
 uint button_pins[] = {  5,  7,  6,  8, 12, 14, 13, 15 };
 static ButtonState button_states[ARR_LEN(button_pins)] = {0};
 
-static uint8_t button_history_read(ButtonState *bs, int i) {
+static bool button_history_read(ButtonState *bs, int i) {
+  // We want to store bools compactly so we have to do some bit twiddling.
   int q = 1 << (i % 8);
   return !!(bs->history[i/8] & q);
 }
-static void button_history_write(ButtonState *bs, int i, uint8_t v) {
-  if (v)
+static void button_history_write(ButtonState *bs, int i, bool value) {
+  if (value)
     bs->history[i/8] |=   1 << (i % 8) ;
   else
     bs->history[i/8] &= ~(1 << (i % 8));
@@ -74,47 +89,44 @@ static void button_history_write(ButtonState *bs, int i, uint8_t v) {
 static void button_init(void) {
   for (int i = 0; i < ARR_LEN(button_pins); i++) {
     ButtonState *bs = button_states + i;
-
     gpio_set_dir(button_pins[i], GPIO_IN);
     gpio_pull_up(button_pins[i]);
-    // gpio_set_input_hysteresis_enabled(button_pins[i], 1);
-    // gpio_set_slew_rate(button_pins[i], GPIO_SLEW_RATE_SLOW);
-    // gpio_disable_pulls(button_pins[i]);
   }
 }
 
+/**
+ * Poll the buttons and push any keypresses to the main core.
+ * 
+ * (Should be run in a loop on a non-primary core.)
+ */
 static void button_poll(void) {
   for (int i = 0; i < ARR_LEN(button_pins); i++) {
     ButtonState *bs = button_states + i;
 
-    bs->ring_i = (bs->ring_i + 1) % HISTORY_LEN;
+    bs->ring_i = (bs->ring_i + 1) % HISTORY_LEN; // Incrememnt ringbuffer index
     button_history_write(bs, bs->ring_i, gpio_get(button_pins[i]));
 
-    // down is true if more than half are true
-    int down = 0;
-    for (int i = 0; i < HISTORY_LEN; i++)
-      down += button_history_read(bs, i);
-    down = down > ((HISTORY_LEN*5)/6);
+    // up is true if more than 5/6 are true
+    int up = 0;
+    for (int i = 0; i < HISTORY_LEN; i++) {
+      up += button_history_read(bs, i);
+    }
+    up = up > ((HISTORY_LEN*5)/6); // Here we convert to a bool
 
-    if (down != bs->last_state) {
-      bs->last_state = down;
-
-      // spade_call_press(button_pins[i]);
-
-      // queue_add_blocking(&button_queue, &(ButtonPress) { .pin = button_pins[i] });
-      if (!down) multicore_fifo_push_blocking(button_pins[i]);
-
-      //      if (button_pins[i] == 8) map_move(map_get_first('p'),  1,  0);
-      // else if (button_pins[i] == 6) map_move(map_get_first('p'), -1,  0);
-      // else if (button_pins[i] == 7) map_move(map_get_first('p'),  0,  1);
-      // else if (button_pins[i] == 5) map_move(map_get_first('p'),  0, -1);
+    if (up != bs->last_state) {
+      bs->last_state = up;
+      if (!up) {
+        // Send the keypress to the main core
+        multicore_fifo_push_blocking(button_pins[i]); 
+      }
     }
   }
 }
 
+// Turn on the power lights and dim them with PWM.
 static void power_lights() {
   // left white light
-  const pin_num_0 = 28;
+  const int pin_num_0 = 28;
   gpio_set_function(pin_num_0, GPIO_FUNC_PWM);
   uint slice_num_0 = pwm_gpio_to_slice_num(pin_num_0);
   pwm_set_enabled(slice_num_0, true);
@@ -128,6 +140,7 @@ static void power_lights() {
   // pwm_set_gpio_level(pin_num_1, 65535/4);
 }
 
+// Entry point for the second core that polls the buttons.
 static void core1_entry(void) {
   button_init();
 
@@ -136,16 +149,22 @@ static void core1_entry(void) {
   }
 }
 
+/**
+ * Seed the random number generator with entropy from
+ * random electricity as well as temperature readings.
+ */
 static void rng_init(void) {
   adc_init();
   uint32_t seed = 0;
 
+  // Read some random electricity
   for (int i = 0; i < 4; i++) {
     adc_select_input(4);
     sleep_ms(1);
     seed ^= adc_read();
   }
 
+  // Read some temperature data
   adc_set_temp_sensor_enabled(true);
   adc_select_input(4);
   sleep_ms(1);
@@ -155,42 +174,44 @@ static void rng_init(void) {
   srand(seed);
 }
 
+// Wait for a game to be uploaded.
 static int load_new_scripts(void) {
   return upl_stdin_read();
 }
 
+/**
+ * Implementations for PianoOpts (see src/shared/audio/piano.h)
+ * 
+ * p (the song object) is type erased because that's an implementation detail
+ * for us. It's actually a jerry_value_t, not a void pointer, so we gotta cast.
+ */
 #ifdef SPADE_AUDIO
-void piano_jerry_song_free(void *p) {
-  // it's straight up a jerry_value_t, not even a pointer to one
-  jerry_value_t jvt = (jerry_value_t)p;
+  void piano_jerry_song_free(void *p) {
+    jerry_value_t jvt = (jerry_value_t)p;
+    jerry_release_value(jvt);
+  }
 
-  jerry_release_value(jvt);
-}
-int piano_jerry_song_chars(void *p, char *buf, int buf_len) {
-  // it's straight up a jerry_value_t, not even a pointer to one
-  jerry_value_t jvt = (jerry_value_t)p;
-
-  int read = jerry_string_to_char_buffer(jvt, (jerry_char_t *)buf, (jerry_size_t) buf_len);
-  return read;
-}
+  int piano_jerry_song_chars(void *p, char *buf, int buf_len) {
+    jerry_value_t jvt = (jerry_value_t)p;
+    int read = jerry_string_to_char_buffer(jvt, (jerry_char_t *)buf, (jerry_size_t) buf_len);
+    return read;
+  }
 #endif
 
-static void write_pixel(int x, int y, Color c) {
-  (void *)x;
-  (void *)y;
-  st7735_fill_send(c);
-}
-
 int main() {
-  power_lights();
-  stdio_init_all();
-  st7735_init();
-  rng_init();
+  errorbuf_color = color16(0, 255, 255); // cyan
 
-  jerry_init (JERRY_INIT_MEM_STATS);
-  init(sprite_free_jerry_object); // gosh i should namespace base engine
+  power_lights();   // Turn on the power lights
+  stdio_init_all(); // Init serial port
+  st7735_init();    // Init display
+  rng_init();       // Init RNG
+
+  // Init JerryScript
+  jerry_init(JERRY_INIT_MEM_STATS);
+  init(sprite_free_jerry_object); // TODO: document
 
   while(!save_read()) {
+    // No game stored in memory
     strcpy(errorbuf, "                    \n"
                      "                    \n"
                      "                    \n"
@@ -205,25 +226,35 @@ int main() {
                      "                    \n"
                      "                    \n"
                      "                    \n"
-                     " sprig.hackclub.dev \n");
+                     " sprig.hackclub.com \n");
     render_errorbuf();
     st7735_fill_start();
-      render(write_pixel);
+    render(st7735_fill_send);
     st7735_fill_finish();
 
     load_new_scripts();
   }
 
+  // Start a core to listen for keypresses.
   multicore_launch_core1(core1_entry);
 
-  /* drain keypresses
+  /**
+   * We get a bunch of fake keypresses at startup, so we need to
+   * drain them from the FIFO queue.
    *
-   * what really needs to be done here is to have button_init
-   * record when it starts so that we can use that timestamp to
-   * ignore these fake startup keypresses */
+   * What really needs to be done here is to have button_init
+   * record when it starts so that we can ignore keypresses after
+   * that timestamp.
+   */
   sleep_ms(50);
   while (multicore_fifo_rvalid()) multicore_fifo_pop_blocking();
 
+  /**
+   * Wait for a keypress to start the game.
+   * 
+   * This is important so games with e.g. infinite loops don't
+   * brick the device as soon as they start up.
+   */
   while(!multicore_fifo_rvalid()) {
     strcpy(errorbuf, "                    \n"
                      "                    \n"
@@ -239,65 +270,81 @@ int main() {
                      "                    \n"
                      "                    \n"
                      "                    \n"
-                     " sprig.hackclub.dev \n");
+                     " sprig.hackclub.com \n");
     render_errorbuf();
     st7735_fill_start();
-      render(write_pixel);
+    render(st7735_fill_send);
     st7735_fill_finish();
 
     load_new_scripts();
   }
+
+  // Wow, we can actually run a game now!
+
+  // Clear the errorbuf and make it red
   memset(errorbuf, 0, sizeof(errorbuf));
+  errorbuf_color = color16(255, 0, 0);
   text_clear();
 
-  // drain keypresses 
+  // Drain any remaining keypresses
   while (multicore_fifo_rvalid()) multicore_fifo_pop_blocking();
 
-  // init js
+  // Run the code!
   js_run(save_read(), strlen(save_read()));
 
-#ifdef SPADE_AUDIO
-  piano_init((PianoOpts) {
-    .song_free = piano_jerry_song_free,
-    .song_chars = piano_jerry_song_chars,
-  });
-  audio_init();
-#endif
+  #ifdef SPADE_AUDIO
+    // Initialize audio
+    piano_init((PianoOpts) {
+      .song_free = piano_jerry_song_free,
+      .song_chars = piano_jerry_song_chars,
+    });
+    audio_init();
+  #endif
 
+  // Current time for timer handling (see frame_cb in shared/sprig_engine/engine.js)
   absolute_time_t last = get_absolute_time();
   dbg("okay launching game loop");
-  while(1) {
-    // input handling
-    puts("please tell me it's not the fifo");
-    while (multicore_fifo_rvalid())
+
+  // Event loop!
+  while (1) {
+    // Handle any new button presses
+    while (multicore_fifo_rvalid()) {
       spade_call_press(multicore_fifo_pop_blocking());
+    }
+
+    // Run async code
+    js_promises();
 
     // setTimeout/setInterval impl
     absolute_time_t now = get_absolute_time();
     int elapsed = us_to_ms(absolute_time_diff_us(last, now));
     last = now;
-    puts("frame?");
     spade_call_frame(elapsed);
 
-    puts("promises?");
-    js_promises();
+    #ifdef SPADE_AUDIO
+      // Get any audio to the speaker
+      audio_try_push_samples();
+    #endif
 
-#if SPADE_AUDIO
-    audio_try_push_samples();
-#endif
-
-    // upload new scripts
-    puts("not load new scripts surely?");
+    // Break if they're trying to upload a new game
     if (load_new_scripts()) break;
 
-    // render
-    puts("uhh rendering? lol");
+    // Render
     render_errorbuf();
     st7735_fill_start();
-      render(write_pixel);
+    render(st7735_fill_send);
     st7735_fill_finish();
   }
 
+  /**
+   * User uploaded a new game mid-game. We're gonna try to reboot here,
+   * but just in case it doesn't work, we'll print a message nicely
+   * asking them to reboot. They'll never know there was a bug!
+   * 
+   * (Unless they read this code. Which is encouraged. shhhhhhhhhhh~)
+   */
+
+  errorbuf_color = color16(50, 205, 50); // lime green
   strcpy(errorbuf, "                    \n"
                    "                    \n"
                    "                    \n"
@@ -312,13 +359,20 @@ int main() {
                    "                    \n"
                    "                    \n"
                    "                    \n"
-                   " sprig.hackclub.dev \n");
-
+                   " sprig.hackclub.com \n");
   render_errorbuf();
   st7735_fill_start();
-    render(write_pixel);
+  render(st7735_fill_send);
   st7735_fill_finish();
 
+  /**
+   * Watchdog is a mechanism designed to catch infinite loops. It will
+   * automatically reboot the device if another function, watchdog_update()
+   * is not called rapidly enough.
+   * 
+   * Enabling watchdog with a timeout of 0 will cause the Pico to reboot
+   * right away.
+   */
   watchdog_enable(0, false);
   while (1) {}
 }

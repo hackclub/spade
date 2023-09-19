@@ -2,7 +2,7 @@
  * Driver for the Raspberry Pi audio system. All actual sound generation code is in shared/audio/piano.c.
  */
 
-#include "shared/audio/piano.h"
+#include "shared/audio/piano.c"
 
 #include "hardware/clocks.h"
 #include "hardware/structs/clocks.h"
