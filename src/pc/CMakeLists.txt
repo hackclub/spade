@@ -10,7 +10,13 @@ else()
   message(WARNING "Spade audio is only supported on macOS, audio will be muted")
 endif()
 
-add_subdirectory(pc/deps/minifb)
+include(FetchContent)
+FetchContent_Declare(
+  minifb
+  GIT_REPOSITORY https://github.com/emoon/minifb
+  GIT_TAG        19b1a867762f92ea9f28c0195ef51f60d329aaa7
+)
+FetchContent_MakeAvailable(minifb)
 target_link_libraries(spade PRIVATE minifb)
 
 set(CMAKE_CXX_CLANG_TIDY

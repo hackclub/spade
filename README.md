@@ -25,7 +25,6 @@ Clone Spade:
 cd ~
 git clone https://github.com/hackclub/spade.git
 cd spade
-git submodule update --init --recursive
 ```
 
 Install JerryScript:
