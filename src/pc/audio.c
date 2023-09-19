@@ -1,3 +1,7 @@
+/**
+ * Driver for the PC audio system. All actual sound generation code is in shared/audio/piano.c.
+ */
+
 #include <CoreAudio/CoreAudio.h>
 #include <AudioUnit/AudioUnit.h>
 #include <pthread.h>
