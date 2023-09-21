@@ -199,6 +199,9 @@ static int load_new_scripts(void) {
 #endif
 
 int main() {
+  // Overclock the RP2040!
+  set_sys_clock_khz(270000, true);
+
   errorbuf_color = color16(0, 255, 255); // cyan
 
   power_lights();   // Turn on the power lights

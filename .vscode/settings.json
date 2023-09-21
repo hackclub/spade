@@ -1,0 +1,21 @@
+{
+	"files.associations": {
+		"*.ejs": "html",
+		"*.css": "css",
+		"*.tcc": "c",
+		"compare": "c",
+		"limits": "c",
+		"base_engine.h": "c",
+		"jerry_mem.h": "c",
+		"optional": "c",
+		"functional": "c",
+		"random": "c",
+		"ostream": "c",
+		"streambuf": "c",
+		"unordered_map": "c",
+		"numeric": "c",
+		"stdint.h": "c",
+		"module_native.h": "c",
+		"native_magic_strings.h": "c"
+	}
+}

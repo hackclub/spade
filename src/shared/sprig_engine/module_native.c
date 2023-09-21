@@ -178,7 +178,7 @@ static Sprite *sprite_from_jerry_object(jerry_value_t this_val) {
   jerry_release_value(      addr_prop);
   jerry_release_value(generation_prop);
 
-  if (map_active(s, generation)) return s;
+  if (sprite_is_active(s, generation)) return s;
   else                           return NULL;
 }
 

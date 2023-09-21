@@ -57,7 +57,7 @@ git submodule update --init
 
 For compiling on both PC and Pico you'll need to convert engine.js to a .cstring file.
 
-Run `./jsdev.sh` to minify and update the engine. Keep it running to auto-update.
+Run `./tools/jsdev.sh` to minify and update the engine. Keep it running to auto-update.
 
 ### Pico Build
 

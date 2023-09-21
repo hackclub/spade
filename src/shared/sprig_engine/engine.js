@@ -45,7 +45,6 @@ exports.playTune = (str, times) => {
 
 /* opts: x, y, color (all optional) */
 exports.addText = (str, opts={}) => {
-  console.log("engine.js:addText");
   const CHARS_MAX_X = 21;
   const padLeft = Math.floor((CHARS_MAX_X - str.length)/2);
 
@@ -61,7 +60,6 @@ exports.clearText = () => native.text_clear();
 
 
 exports.setLegend = (...bitmaps) => {
-  console.log("engine.js:setLegend");
   native.legend_clear();
   for (const [charStr, bitmap] of bitmaps) {
     native.legend_doodle_set(charStr, bitmap.trim());
@@ -70,13 +68,11 @@ exports.setLegend = (...bitmaps) => {
 };
 
 exports.setSolids = solids => {
-  console.log("engine.js:setSolids");
   native.solids_clear();
   solids.forEach(native.solids_push);
 };
 
 exports.setPushables = pushTable => {
-  console.log("engine.js:setPushables");
   native.push_table_clear();
   for (const [pusher, pushesList] of Object.entries(pushTable))
     for (const pushes of pushesList)
@@ -136,6 +132,8 @@ native.press_cb(pin => {
 
     for (let i = firstClearId + 1; i < id; i++) {
       const tim = timers[i];
+      if (!tim) continue;
+
       if (tim.ms <= 0) {
         /* trigger their callback */
         try {
@@ -161,7 +159,6 @@ native.press_cb(pin => {
 }
 
 exports.onInput = (key, fn) => {
-  console.log("engine.js:onInput");
   const pin = button.keyToPin[key];
 
   if (pin === undefined)
