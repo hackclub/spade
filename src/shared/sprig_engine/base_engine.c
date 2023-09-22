@@ -77,27 +77,22 @@ static Sprite *get_sprite(uint16_t i) {
 
 // Expand the sprite pool! Preserves current sprites.
 static void sprite_pool_realloc(int size) {
+  dbg("reallocating the sprite pool!");
   size_t start_size = state->sprite_pool_size;
 
-  dbg("bouta call a bunch of realloc!");
-  #define realloc_n(arr, os, ns) jerry_realloc((arr),                 \
-                                              sizeof((arr)[0]) * os, \
-                                              sizeof((arr)[0]) * ns);
+  #define realloc_n(arr, os, ns) jerry_realloc((arr), sizeof((arr)[0]) * os, sizeof((arr)[0]) * ns);
   state->sprite_slot_active     = realloc_n(state->sprite_slot_active    , start_size, size);
-  dbg("you get a realloc ...");
   state->sprite_slot_generation = realloc_n(state->sprite_slot_generation, start_size, size);
-  dbg("and you get a realloc ...");
   state->sprite_pool            = realloc_n(state->sprite_pool           , start_size, size);
-  dbg("and you!");
   #undef realloc_n
 
   int worked = state->sprite_slot_active     &&
                state->sprite_slot_generation &&
                state->sprite_pool             ;
-  dbg("let's see if it worked ...");
-  dbgf("state->sprite_slot_active     = %lu\n", state->sprite_slot_active    );
-  dbgf("state->sprite_slot_generation = %lu\n", state->sprite_slot_generation);
-  dbgf("state->sprite_pool            = %lu\n", state->sprite_pool           );
+  // dbg("let's see if it worked ...");
+  // dbgf("state->sprite_slot_active     = %lu\n", state->sprite_slot_active    );
+  // dbgf("state->sprite_slot_generation = %lu\n", state->sprite_slot_generation);
+  // dbgf("state->sprite_pool            = %lu\n", state->sprite_pool           );
 
   if (!worked) {
     snprintf(

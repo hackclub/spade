@@ -17,5 +17,6 @@
 		"stdint.h": "c",
 		"module_native.h": "c",
 		"native_magic_strings.h": "c"
-	}
+	},
+	"C_Cpp.errorSquiggles": "disabled"
 }
