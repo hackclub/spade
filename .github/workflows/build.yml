@@ -65,7 +65,7 @@ jobs:
           cd jerryscript
           git checkout 8ba0d1b6ee5a065a42f3b306771ad8e3c0d819bc
           cd ~/spade
-          ./pc/jerry/refresh.sh
+          ./src/pc/jerry/refresh.sh
       
       - name: 'Clone pico-sdk'
         run: |
@@ -80,7 +80,8 @@ jobs:
       - name: 'Build Spade'
         run: |
           cd ~/spade
-          ./tools/cstringify.py engine.js > engine.js.cstring
+          mkdir ./src/shared/sprig_engine/build
+          ./tools/cstringify.py ./src/shared/sprig_engine/engine.js > ./src/shared/sprig_engine/build/engine.min.js.cstring
           cmake --preset=rpi
           cd rpi_build
           make
@@ -89,6 +90,5 @@ jobs:
         uses: 'actions/upload-artifact@v3'
         with:
           name: 'spade.uf2'
-          path: '~/spade/rpi_build/spade.uf2'
-          if-no-files-found: error
-          
+          path: '~/spade/rpi_build/src/spade.uf2'
+          if-no-files-found:         
