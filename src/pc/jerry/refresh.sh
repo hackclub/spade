@@ -1,6 +1,9 @@
 set -e
 
-cd ~/jerryscript_build
+SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
+PROJECT_HOME=$SCRIPT_DIR/../../../..
+
+cd $PROJECT_HOME/jerryscript_build
 rm -rf example-*
 
 python3 jerryscript/tools/build.py \
@@ -16,7 +19,7 @@ python3 jerryscript/tools/build.py \
   --jerry-cmdline=OFF
 make -C $(pwd)/example_build install\
 
-cd ~/spade/src/pc/jerry
-cp -r ~/jerryscript_build/example_build/lib ./
+cd $PROJECT_HOME/spade/src/pc/jerry
+cp -r $PROJECT_HOME/jerryscript_build/example_build/lib ./
 rm -rf include
-cp -r ~/jerryscript_build/example_install/include ./
+cp -r $PROJECT_HOME/jerryscript_build/example_install/include ./
