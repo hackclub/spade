@@ -91,4 +91,4 @@ jobs:
         with:
           name: 'spade.uf2'
           path: '~/spade/rpi_build/src/spade.uf2'
-          if-no-files-found:         
+          if-no-files-found: error
