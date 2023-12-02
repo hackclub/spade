@@ -68,7 +68,6 @@ const {
   exports.clearText = () => native.text_clear();
 
   exports.mountSD = (key) => {
-    exports.addText("mounting SD card!");
     console.log("engine.js:mountSD");
     native.mountSD(key);
   };
