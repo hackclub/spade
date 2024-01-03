@@ -8,7 +8,6 @@ const {
   setBackground,
   /* text */ addText,
   clearText,
-  mountSD,
 
   /*   spawn sprites */ setMap,
   addSprite,
@@ -66,11 +65,6 @@ const {
   };
 
   exports.clearText = () => native.text_clear();
-
-  exports.mountSD = (key) => {
-    console.log("engine.js:mountSD");
-    native.mountSD(key);
-  };
 
   exports.setLegend = (...bitmaps) => {
     native.legend_clear();
