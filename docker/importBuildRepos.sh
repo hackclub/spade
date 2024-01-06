@@ -23,5 +23,4 @@ git submodule update --init
 cd ../pico-extras
 git submodule update --init
 
-cd ~/spade
-touch game.js
+mkdir /artifacts

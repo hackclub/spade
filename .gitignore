@@ -13,3 +13,5 @@ engine.min.js.cstring
 game.js
 game.js.cstring
 game.min.js
+dockerBuildLog.txt
+spade.uf2
