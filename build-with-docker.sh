@@ -1,4 +1,4 @@
-for dep in docker; do
+for dep in docker chcon echo whoami grep; do
     if ! command -v $dep > /dev/null; then
         printf "%s not found, please install %s\n" "$dep" "$dep"
         exit 1
