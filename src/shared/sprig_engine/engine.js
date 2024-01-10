@@ -48,6 +48,11 @@ exports.addText = (str, opts={}) => {
   const CHARS_MAX_X = 21;
   const padLeft = Math.floor((CHARS_MAX_X - str.length)/2);
 
+  for (const char of str.split('')) {
+    if (" !\"#%&\'()*+,./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ\\^_-`abcdefghijklmnopqrstuvwxyz|~¦§¨©¬®¯°±´¶·¸ÀÁÂÃÄÅÆÇÈÉÊËÌÍÎÏÐÑÒÓÔÕÖ×ÙÚÛÜÝÞßàáâãäåæçèéêëìíîïñòóôõö÷ùúûüýþÿĀāĂăĄąĆćĊċČčĎĐđĒēĖėĘęĚěĞğĠġĦħĪīĮįİıŃńŇňŌōŒœŞşŨũŪūŮůŲųŴŵŶŷŸǍǎǏǐǑǒǓǔˆˇ˘˙˚˛˜˝ẀẁẂẃẄẅỲỳ†‡•…‰⁄™∂∅∏∑−√∞∫≈≠≤≥◊".indexOf(char) === -1)
+      throw new Error(`Character ${char} is not in the font. It will be rendered incorrectly.`)
+  }
+
   native.text_add(
     str,
     opts.color ?? [10, 10, 40],
