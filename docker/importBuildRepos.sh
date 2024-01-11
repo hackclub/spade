@@ -1,9 +1,5 @@
 dnf install git python3 clang make cmake entr uglify-js gcc-arm-linux-gnu arm-none-eabi-gcc-cs-c++ arm-none-eabi-gcc-cs arm-none-eabi-binutils arm-none-eabi-newlib -y
 
-cd ~
-git clone https://github.com/hackclub/spade.git
-cd spade
-
 mkdir ~/jerryscript_build
 cd ~/jerryscript_build
 git clone https://github.com/jerryscript-project/jerryscript.git
