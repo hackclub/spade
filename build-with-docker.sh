@@ -17,4 +17,4 @@ fi
 
 docker build ./docker | tee ./dockerBuildLog.txt
 chcon -R -t container_file_t ./
-docker run -it --rm --volume ./:/artifacts $(docker images | awk '{print $3}' | awk 'NR==2')
+docker run -it --rm --volume ./:/root/spade $(docker images | awk '{print $3}' | awk 'NR==2')
