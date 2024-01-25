@@ -27,5 +27,9 @@ fi
 
 
 docker build ./docker | tee ./dockerBuildLog.txt
-chcon -R -t container_file_t ./
+
+if [[ $OSTYPE == *"linux"* ]]; then
+    chcon -R -t container_file_t ./
+fi
+
 docker run -it --rm --volume ./:/root/spade $(docker images | awk '{print $3}' | awk 'NR==2')
