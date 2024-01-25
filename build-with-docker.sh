@@ -1,17 +1,28 @@
-for dep in docker chcon echo whoami grep; do
+dependencies=("docker" "echo" "whoami" "grep")
+
+if [[ $OSTYPE == *"linux"* ]]; then
+    dependencies+=("chcon")
+fi
+
+for dep in "${dependencies[@]}"; do
     if ! command -v $dep > /dev/null; then
         printf "%s not found, please install %s\n" "$dep" "$dep"
         exit 1
     fi
 done
 
-echo Dependencies found successfully
+echo "Dependencies found successfully"
+
 
 if id -nG $(whoami) | grep -qw "docker"; then
     echo User in docker group, continuing
 else
-    echo User $(whoami) not in the docker group. Please add user $(whoami) to the docker group and try again
-    exit 1
+    if [[ $OSTYPE != *"linux"* ]]; then
+        echo "Platform is not linux, skipping docker group check"
+    else
+        echo User $(whoami) not in the docker group. Please add user $(whoami) to the docker group and try again
+        exit 1
+    fi
 fi
 
 
