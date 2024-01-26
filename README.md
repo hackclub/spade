@@ -18,8 +18,7 @@ However, on-device debugging is hard, so the engine can also be compiled to run 
 
 #### Building
  - Clone the repository
- - Change code as desired
- - Change into the spade directory
+ - Change into the spade directory and change code as desired
  - Run `build-with-docker.sh`
 
 
