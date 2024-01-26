@@ -8,6 +8,25 @@ However, on-device debugging is hard, so the engine can also be compiled to run 
 
 ## Building
 
+### Using Docker (Easiest for beginners)
+
+#### Prerequisites:
+ - Working Linux/MacOS system with Docker environment
+ - Dependencies commands:
+   - docker
+   - echo
+   - whoami
+   - grep
+   - chcon (Linux only)
+
+#### Building
+ - Clone the repository
+ - Change code as desired
+ - Change into the spade directory
+ - Run `build-with-docker.sh`
+
+
+### Native
 Prerequisites:
 
 - A working Python 3 environment.
