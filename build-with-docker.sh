@@ -1,3 +1,5 @@
+#!/bin/bash
+
 dependencies=("docker" "echo" "whoami" "grep")
 
 if [[ $OSTYPE == *"linux"* ]]; then
