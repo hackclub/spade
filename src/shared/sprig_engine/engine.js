@@ -1,5 +1,6 @@
 let setTimeout, setInterval, clearInterval, clearTimeout;
 const {
+  setValue,
   /* sprite interactions */ setSolids,
   setPushables,
   /*              see also: sprite.x +=, sprite.y += */
@@ -55,6 +56,10 @@ const {
       isPlaying: () => native.piano_is_song_queued(str),
     };
   };
+
+  exports.setValue = (key, value) => {
+    native.setValue(key.toString(), JSON.stringify(value));
+  }
 
   /* opts: x, y, color (all optional) */
   exports.addText = (str, opts = {}) => {
