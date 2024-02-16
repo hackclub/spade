@@ -1,6 +1,7 @@
 let setTimeout, setInterval, clearInterval, clearTimeout;
 const {
   setValue,
+  getValue,
   /* sprite interactions */ setSolids,
   setPushables,
   /*              see also: sprite.x +=, sprite.y += */
@@ -59,6 +60,10 @@ const {
 
   exports.setValue = (key, value) => {
     native.setValue(key.toString(), JSON.stringify(value));
+  }
+  exports.getValue = (key) => {
+    const value = native.getValue(key.toString());
+    return value ? JSON.parse(value) : undefined;
   }
 
   /* opts: x, y, color (all optional) */
