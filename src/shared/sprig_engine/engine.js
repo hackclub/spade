@@ -78,6 +78,14 @@ const {
 
   exports.setLegend = (...bitmaps) => {
     native.legend_clear();
+
+    for (const [key, bitmap] of bitmaps) {
+      const rows = bitmap.trim().split("\n").map(x => x.trim())
+      const rowLengths = rows.map(x => x.length);
+      const isRect = rowLengths.every(val => val === rowLengths[0])
+      if (!isRect) throw new Error(`Bitmap with key ${key} is not rectangular.`)
+    }
+
     for (const [charStr, bitmap] of bitmaps) {
       native.legend_doodle_set(charStr, bitmap.trim());
     }

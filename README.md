@@ -8,6 +8,21 @@ However, on-device debugging is hard, so the engine can also be compiled to run 
 
 ## Building
 
+### Using Docker
+
+#### Prerequisites:
+ - Working Linux/MacOS system with Docker environment
+ - Dependencies commands:
+   - docker
+   - chcon (Linux only)
+
+#### Building
+ - Clone the repository
+ - Change into the spade directory and change code as desired
+ - Run `build-with-docker.sh`
+
+
+### Manual
 Prerequisites:
 
 - A working Python 3 environment.
