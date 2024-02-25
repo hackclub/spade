@@ -2,6 +2,7 @@ let setTimeout, setInterval, clearInterval, clearTimeout;
 const {
   setValue,
   getValue,
+  isSDMounted,
   /* sprite interactions */ setSolids,
   setPushables,
   /*              see also: sprite.x +=, sprite.y += */
@@ -65,6 +66,7 @@ const {
     const value = native.getValue(key.toString());
     return value ? JSON.parse(value) : undefined;
   }
+  exports.isSDMounted = () => native.isSDMounted();
 
   /* opts: x, y, color (all optional) */
   exports.addText = (str, opts = {}) => {
