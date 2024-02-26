@@ -3,6 +3,7 @@ const {
   setValue,
   getValue,
   isSDMounted,
+  setID,
   /* sprite interactions */ setSolids,
   setPushables,
   /*              see also: sprite.x +=, sprite.y += */
@@ -39,6 +40,7 @@ const {
   playTune,
 } = (() => {
   let _gameState = {};
+  let _gameId = null;
 
   const exports = {};
   /* re-exports from C; bottom of module_native.c has notes about why these are in C */
@@ -62,6 +64,10 @@ const {
   };
 
   exports.setValue = (key, value) => {
+    if (typeof _gameId !== "string") {
+      throw new Error("setID must be called before setValue");
+    }
+
     const k = key.toString();
     const v = JSON.stringify(value);
     _gameState[k] = v;
@@ -70,6 +76,10 @@ const {
     }
   }
   exports.getValue = (key) => {
+    if (typeof _gameId !== "string") {
+      throw new Error("setID must be called before getValue");
+    }
+
     const k = key.toString();
     const cachedVal = _gameState[k];
     if (cachedVal !== undefined) {
@@ -87,6 +97,18 @@ const {
     return undefined;
   }
   exports.isSDMounted = () => native.isSDMounted();
+  exports.setID = (id) => {
+    if (typeof(id) !== "string" || id.length === 0) {
+      throw new Error("setID must be called with a non-empty string");
+    }
+
+    if (_gameId !== null) {
+      throw new Error("setID can only be called once");
+    }
+
+    _gameId = id;
+    native.setID(id);
+  };
 
   /* opts: x, y, color (all optional) */
   exports.addText = (str, opts = {}) => {
