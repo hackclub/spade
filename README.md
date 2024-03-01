@@ -1,3 +1,5 @@
+# NOTE - This repo has been deprecated.  Please refer to https://github.com/hackclub/sprig for the latest version of the Spade firmware.
+
 # Spade - an implementation of Sprig engine
 
 This repo is a C implementation of the Sprig engine you can find in the "engine" folder of the repo [hackclub/sprig](https://github.com/hackclub/sprig).
