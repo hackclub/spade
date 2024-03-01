@@ -34,4 +34,4 @@ if [[ $OSTYPE == *"linux"* ]]; then
     chcon -R -t container_file_t ./
 fi
 
-docker run -it --rm --volume ./:/root/spade $(docker images | awk '{print $3}' | awk 'NR==2')
+docker run -it --rm --volume `pwd`:/root/spade $(docker images | awk '{print $3}' | awk 'NR==2')
