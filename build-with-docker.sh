@@ -15,7 +15,21 @@ done
 
 echo "Dependencies found successfully"
 
+echo "Cleaning up previous build artifacts..."
+if [ -d rpi_build ]; then
+	rm -rf rpi_build
+fi
+if [ -f spade.elf ]; then
+	rm spade.elf
+fi
+if [ -f spade.uf2 ]; then
+	rm spade.uf2
+fi
+if [ -f dockerBuildLog.txt ]; then
+	rm dockerBuildLog.txt
+fi
 
+# Ensure docker group stuff for linux
 if id -nG $(whoami) | grep -qw "docker"; then
     echo User in docker group, continuing
 else
